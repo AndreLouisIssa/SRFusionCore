@@ -18,3 +18,6 @@ And under the hood this mod
  - registers slimes created by manual invocation with the parameters and blame cached in the save registry if run while in a save
  - generates unique slime IDs: component slimes + category + hash of the parameters
  - invokes the strategies on missing IDs that match the blame
+
+And where possible
+ - Adds a console command to invoke a blamed strategy, marshalling arguments into it
