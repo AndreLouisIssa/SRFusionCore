@@ -15,6 +15,7 @@ And the factory can make use of members in a static helper class
  - function that constructs the right part of an ID from a strategy and parameters
  - function that constructs the full ID from a strategy, component slimes, and parameters
  - function that constructs a sensible display name from a strategy and component slimes
+ - function that creates a new named ID at runtime
  - manual invocation of a fusion strategy
  - enlisting a strategy in the first place
          
