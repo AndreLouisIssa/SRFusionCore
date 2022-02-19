@@ -10,6 +10,9 @@ And the factory can make use of members in a static helper class
  - list of all pure slimes by very late startup
  - list of all pure slimes' names
  - function that breaks down an ID into component slimes
+ - function that constructs the left part of an ID from component slimes
+ - function that constructs the right part of an ID from a strategy and parameters
+ - function that constructs the full ID from a strategy, component slimes, and parameters
  - manual invocation of a fusion strategy
  - enlisting a strategy in the first place
          
