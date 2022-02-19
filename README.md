@@ -13,13 +13,14 @@ And the factory can make use of members in a static helper class
  - function that constructs the left part of an ID from component slimes
  - function that constructs the right part of an ID from a strategy and parameters
  - function that constructs the full ID from a strategy, component slimes, and parameters
+ - function that constructs a sensible display name from a strategy and component slimes
  - manual invocation of a fusion strategy
  - enlisting a strategy in the first place
          
 And under the hood this mod
  - enables IDs to contain unique suffixes
  - registers slimes created by manual invocation with the parameters and blame cached in the save registry if run while in a save
- - generates unique slime IDs: component slimes + category + hash of the parameters
+ - generates unique slime IDs: component slimes + category + hash of the strategy + hash of the parameters
  - invokes the strategies on missing IDs that match the blame
 
 And where possible
