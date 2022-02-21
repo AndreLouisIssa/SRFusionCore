@@ -4,56 +4,56 @@ using System.Collections.Generic;
 
 namespace SRFusionCore
 {
-    public class FusionStrategy : IDataRegistryMember
+    public class FusionStrategy
     {
-        public Action<Identifiable.Id, List<SlimeDefinition>, List<Parameter>> factory;
-        public (string, string) category;
         public string blame;
+        public string category;
+        public List<Type> parameters;
+        public Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory;
 
-        public FusionStrategy(Action<Identifiable.Id, List<SlimeDefinition>, List<Parameter>> item1, (string, string) item2, string item3)
+        public FusionStrategy(string blame, string category, List<Type> parameters, Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory)
         {
-            factory = item1;
-            category = item2;
-            blame = item3;
+            this.blame = blame;
+            this.category = category;
+            this.parameters = parameters;
+            this.factory = factory;
         }
 
         public override bool Equals(object obj)
         {
             return obj is FusionStrategy other &&
-                   EqualityComparer<Action<Identifiable.Id, List<SlimeDefinition>, List<Parameter>>>.Default.Equals(factory, other.factory) &&
-                   category.Equals(other.category) &&
-                   blame == other.blame;
+                   blame == other.blame &&
+                   category == other.category &&
+                   EqualityComparer<List<Type>>.Default.Equals(parameters, other.parameters) &&
+                   EqualityComparer<Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition>>.Default.Equals(factory, other.factory);
         }
 
         public override int GetHashCode()
         {
-            int hashCode = 341329424;
-            hashCode = hashCode * -1521134295 + EqualityComparer<Action<Identifiable.Id, List<SlimeDefinition>, List<Parameter>>>.Default.GetHashCode(factory);
-            hashCode = hashCode * -1521134295 + category.GetHashCode();
+            int hashCode = 56328339;
             hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(blame);
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(category);
+            hashCode = hashCode * -1521134295 + EqualityComparer<List<Type>>.Default.GetHashCode(parameters);
+            hashCode = hashCode * -1521134295 + EqualityComparer<Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition>>.Default.GetHashCode(factory);
             return hashCode;
         }
 
-        public void Deconstruct(out Action<Identifiable.Id, List<SlimeDefinition>, List<Parameter>> item1, out (string, string) item2, out string item3)
+        public void Deconstruct(out string blame, out string category, out List<Type> parameters, out Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory)
         {
-            item1 = factory;
-            item2 = category;
-            item3 = blame;
+            blame = this.blame;
+            category = this.category;
+            parameters = this.parameters;
+            factory = this.factory;
         }
 
-        Type IDataRegistryMember.GetModelType()
+        public static implicit operator (string blame, string category, List<Type> parameters, Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory)(FusionStrategy value)
         {
-            throw new NotImplementedException();
+            return (value.blame, value.category, value.parameters, value.factory);
         }
 
-        public static implicit operator (Action<Identifiable.Id, List<SlimeDefinition>, List<Parameter>>, (string, string), string)(FusionStrategy value)
+        public static implicit operator FusionStrategy((string blame, string category, List<Type> parameters, Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory) value)
         {
-            return (value.factory, value.category, value.blame);
-        }
-
-        public static implicit operator FusionStrategy((Action<Identifiable.Id, List<SlimeDefinition>, List<Parameter>>, (string, string), string) value)
-        {
-            return new FusionStrategy(value.Item1, value.Item2, value.Item3);
+            return new FusionStrategy(value.blame, value.category, value.parameters, value.factory);
         }
     }
 }

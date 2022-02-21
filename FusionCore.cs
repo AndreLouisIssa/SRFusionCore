@@ -4,8 +4,6 @@ using SRML.SR.SaveSystem.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
-using Console = SRML.Console.Console;
 
 namespace SRFusionCore
 {
@@ -22,12 +20,12 @@ namespace SRFusionCore
 
         public static void OnWorldDataSave(CompoundDataPiece data)
         {
-            data.SetValue(worldData.GetValue());
+            data.data = worldData.data;
         }
 
         public static void OnWorldDataLoad(CompoundDataPiece data)
         {
-            worldData.SetValue(data.GetValue());
+            worldData.data = data.data;
         }
 
         public static readonly List<FusionStrategy> strategies = new List<FusionStrategy>();
@@ -37,15 +35,31 @@ namespace SRFusionCore
             bool valid = AllComponentsExist(value);
             if (valid)
             {
-                var blame = worldData.GetValue<CompoundDataPiece>("B").GetValue<string>(value);
-                var parameters = GetParameters(worldData.GetValue<CompoundDataPiece>("P").GetValue<string>(value));
-                var components = GetPureSlimes(GetComponentSlimeNames(value));
-                foreach (var strat in fusionStrats.Where(s => s.blame == blame))
+                var data = worldData.GetValue<CompoundDataPiece>(value);
+                var blame = data.GetValue<string>("blame");
+                var strat = fusionStrats.FirstOrDefault(s => s.blame == blame);
+                if (strat is null)
                 {
-                    strat.factory(NewIdentifiableID(value), components, parameters);
+                    Log.Error($"{nameof(SRFusionCore)}: No strategy {blame} to fix missing ID {value}!");
+                    return false;
                 }
+                var parameters = GetParameters(data.GetValue<string>("parameters"));
+                var components = GetComponents(data.GetValue<Identifiable.Id[]>("components"));
+                value = strat.factory(components, parameters).IdentifiableId.ToString();
             }
             return valid;
+        }
+
+        public static string AdjustCategoryName(string original)
+        {
+            if (worldData.HasPiece(original))
+                return "_" + worldData.GetValue<CompoundDataPiece>(original).GetValue<string>("category");
+            return original;
+        }
+
+        private static List<SlimeDefinition> GetComponents(IEnumerable<Identifiable.Id> ids)
+        {
+            return ids.Select(i => SRSingleton<GameContext>.Instance.SlimeDefinitions.GetSlimeByIdentifiableId(i)).ToList();
         }
 
         private static List<Parameter> GetParameters(string v)
@@ -56,8 +70,6 @@ namespace SRFusionCore
 
         public static void Setup()
         {
-            worldData.SetValue("B", new CompoundDataPiece());
-            worldData.SetValue("P", new CompoundDataPiece());
             SlimeDefinitions defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
             foreach (var pure in defns.Slimes.Where(slime => !slime.IsLargo && !exemptSlimes.Contains(slime.IdentifiableId)))
             {
@@ -67,7 +79,9 @@ namespace SRFusionCore
 
         public static string PureName(string name)
         {
-            return name.Replace("_SLIME", "").Replace("_LARGO", "");
+            name = name.Replace("_SLIME", "").Replace("_LARGO", "");
+            if (name.Contains('_')) name = '+' + name + '+';
+            return name;
         }
 
         public static List<string> Decompose(string body, IEnumerable<string> parts, out string rest)
@@ -115,7 +129,7 @@ namespace SRFusionCore
 
         public static Identifiable.Id NewIdentifiableID(string name)
         {
-            if (Enum.IsDefined(typeof(Identifiable.Id), name)) throw new Exception($"ID already exists: {name}");
+            if (Enum.IsDefined(typeof(Identifiable.Id), name)) throw new Exception($"{nameof(SRFusionCore)}: ID already exists: {name}");
             Main.SRModLoader_get_CurrentLoadingStep._override = true;
             var id = IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name);
             Main.SRModLoader_get_CurrentLoadingStep._override = false;

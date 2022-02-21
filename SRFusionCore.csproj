@@ -293,6 +293,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FuseCommand.cs" />
     <Compile Include="FusionCore.cs" />
     <Compile Include="FusionStrategy.cs" />
     <Compile Include="Main.cs" />
