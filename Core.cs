@@ -179,7 +179,7 @@ namespace FusionCore
 
         public static string UniqueName(string suffix, Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
-            return $"{UniquePureName(components)}_{suffix} ({Base36(UniqueNameHash(strategy, components, parameters))})";
+            return $"{UniquePureName(components)}_{suffix}_{Base36(UniqueNameHash(strategy, components, parameters))}";
         }
 
         public static string Base36(int value)
