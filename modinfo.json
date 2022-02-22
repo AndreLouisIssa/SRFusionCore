@@ -1,6 +1,6 @@
 ﻿{
     "id": "fusioncore",
-    "name": "SRFusionCore",
+    "name": "FusionCore",
     "author": "MagicGonads, Aidanamite",
     "description": "Core mod to help dynamically make and load different fusions of slimes",
     "version": "1.0",

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SRFusionCore
+namespace FusionCore
 {
     public class Parameter
     {

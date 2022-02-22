@@ -7,8 +7,8 @@
     <ProjectGuid>{0D292EE7-7231-4539-98B5-5DD6F10277B7}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SRFusionCore</RootNamespace>
-    <AssemblyName>SRFusionCore</AssemblyName>
+    <RootNamespace>FusionCore</RootNamespace>
+    <AssemblyName>FusionCore</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -293,9 +293,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="FuseCommand.cs" />
-    <Compile Include="FusionCore.cs" />
-    <Compile Include="FusionStrategy.cs" />
+    <Compile Include="Command.cs" />
+    <Compile Include="Core.cs" />
+    <Compile Include="Strategy.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="Parameter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

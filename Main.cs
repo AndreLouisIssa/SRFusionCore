@@ -7,18 +7,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
 
-namespace SRFusionCore
+namespace FusionCore
 {
     public class Main : ModEntryPoint
     {
         public override void PreLoad()
         {
             HarmonyInstance.PatchAll();
-            SaveRegistry.RegisterWorldDataLoadDelegate(FusionCore.OnWorldDataLoad);
-            SaveRegistry.RegisterWorldDataSaveDelegate(FusionCore.OnWorldDataSave);
-            EnumTranslator.RegisterFallbackHandler<Identifiable.Id>(FusionCore.ResolveMissingID);
-            SRCallbacks.OnMainMenuLoaded += (_) => FusionCore.worldData.DataList.Clear();
-            Console.RegisterCommand(new FuseCommand());
+            SaveRegistry.RegisterWorldDataLoadDelegate(Core.OnWorldDataLoad);
+            SaveRegistry.RegisterWorldDataSaveDelegate(Core.OnWorldDataSave);
+            EnumTranslator.RegisterFallbackHandler<Identifiable.Id>(Core.ResolveMissingID);
+            SRCallbacks.OnMainMenuLoaded += (_) => Core.worldData.DataList.Clear();
+            Console.RegisterCommand(new Command());
         }
 
         [HarmonyPatch(typeof(SRModLoader), nameof(SRModLoader.LoadMods))]
@@ -26,7 +26,7 @@ namespace SRFusionCore
         {
             public static void Postfix()
             {
-                FusionCore.Setup();
+                Core.Setup();
             }
         }
 
@@ -47,7 +47,7 @@ namespace SRFusionCore
             {
                 var code = instructions.ToList();
                 var ind = code.FindIndex((x) => x.opcode == OpCodes.Stloc_0);
-                code.Insert(ind++, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(FusionCore),nameof(FusionCore.AdjustCategoryName))));
+                code.Insert(ind++, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Core),nameof(Core.AdjustCategoryName))));
                 return code;
             }
         }

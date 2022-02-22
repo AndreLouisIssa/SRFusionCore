@@ -5,11 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SRFusionCore
+namespace FusionCore
 {
-    public static class FusionCore
+    public static class Core
     {
-        public static readonly List<FusionStrategy> fusionStrats = new List<FusionStrategy>();
+        public static readonly List<Strategy> fusionStrats = new List<Strategy>();
         public static readonly Dictionary<string, SlimeDefinition> pureSlimes = new Dictionary<string, SlimeDefinition>();
         public static readonly List<Identifiable.Id> exemptSlimes = new List<Identifiable.Id>
         {
@@ -30,7 +30,7 @@ namespace SRFusionCore
 
         public static Identifiable.Id NewIdentifiableID(string name)
         {
-            if (Enum.IsDefined(typeof(Identifiable.Id), name)) throw new Exception($"{nameof(SRFusionCore)}: ID already exists: {name}");
+            if (Enum.IsDefined(typeof(Identifiable.Id), name)) throw new Exception($"{nameof(FusionCore)}: ID already exists: {name}");
             Main.SRModLoader_get_CurrentLoadingStep._override = true;
             var id = IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name);
             Main.SRModLoader_get_CurrentLoadingStep._override = false;
@@ -47,7 +47,7 @@ namespace SRFusionCore
                 var strat = fusionStrats.FirstOrDefault(s => s.blame == blame);
                 if (strat is null)
                 {
-                    Log.Error($"{nameof(SRFusionCore)}: No strategy {blame} to fix missing ID {value}!");
+                    Log.Error($"{nameof(FusionCore)}: No strategy {blame} to fix missing ID {value}!");
                     return false;
                 }
                 var parameters = GetParameters(data.GetValue<string>("parameters"));
@@ -57,7 +57,7 @@ namespace SRFusionCore
             return valid;
         }
 
-        public static void BlameStrategyForID(Identifiable.Id id, FusionStrategy strategy, List<SlimeDefinition> components, List<Parameter> parameters)
+        public static void BlameStrategyForID(Identifiable.Id id, Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters)
         {
             var data = new CompoundDataPiece(id.ToString());
             data.SetValue("blame", strategy.blame);
@@ -66,7 +66,7 @@ namespace SRFusionCore
             data.SetValue("parameters", string.Join(" ", parameters.Select(p => p.ToString())));
         }
 
-        public static SlimeDefinition InvokeStrategy(FusionStrategy strategy, List<SlimeDefinition> components, List<Parameter> parameters)
+        public static SlimeDefinition InvokeStrategy(Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters)
         {
             var slime = strategy.factory(components, parameters);
             if (!Levels.isMainMenu()) BlameStrategyForID(slime.IdentifiableId, strategy, components, parameters);
@@ -137,10 +137,41 @@ namespace SRFusionCore
             return slimeNames.Select(n => pureSlimes[n]).ToList();
         }
 
+        public static List<SlimeDefinition> GetPureSlimes(string name)
+        {
+            return GetPureSlimes(GetComponentSlimeNames(name));
+        }
+
+        public static List<SlimeDefinition> GetPureSlimes(Identifiable.Id slimeId)
+        {
+            return GetPureSlimes(GetComponentSlimeNames(slimeId));
+        }
+
         public static bool AllComponentsExist(string name)
         {
             Decompose(PureName(name), pureSlimes.Keys, out string rest);
             return rest.Replace("_", "") == "";
+        }
+
+        public static bool PureNameExists(string name)
+        {
+            return pureSlimes.Keys.Contains(PureName(name));
+        }
+
+        public static string UniquePureName(List<SlimeDefinition> components)
+        {
+            return string.Join("_", components.Select(c => PureName(c.IdentifiableId.ToString())));
+        }
+
+        public static int UniqueNameHash(Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
+        {
+            var hash = (parameters is null) ? 0 : parameters.Select(p => p.GetHashCode()).Aggregate((h1, h2) => 13 * h1 + h2);
+            return hash + components.Select(c => c.IdentifiableId.GetHashCode()).Aggregate((h1, h2) => 11 * h1 + h2) + 27 * strategy.GetHashCode();
+        }
+
+        public static string UniqueName(string suffix, Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
+        {
+            return $"{UniquePureName(components)}_{suffix}({UniqueNameHash(strategy, components, parameters)})"; 
         }
     }
 }
