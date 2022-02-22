@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using SRML;
+using SRML.Console;
 using SRML.SR;
 using SRML.SR.SaveSystem;
 using System.Collections.Generic;
@@ -16,6 +17,8 @@ namespace SRFusionCore
             SaveRegistry.RegisterWorldDataLoadDelegate(FusionCore.OnWorldDataLoad);
             SaveRegistry.RegisterWorldDataSaveDelegate(FusionCore.OnWorldDataSave);
             EnumTranslator.RegisterFallbackHandler<Identifiable.Id>(FusionCore.ResolveMissingID);
+            SRCallbacks.OnMainMenuLoaded += (_) => FusionCore.worldData.DataList.Clear();
+            Console.RegisterCommand(new FuseCommand());
         }
 
         [HarmonyPatch(typeof(SRModLoader), nameof(SRModLoader.LoadMods))]
