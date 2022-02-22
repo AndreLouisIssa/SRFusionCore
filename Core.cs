@@ -178,11 +178,12 @@ namespace FusionCore
 
         public static string UniqueName(string suffix, Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
-            return $"{UniquePureName(components)}_{suffix}({UniqueNameHash(strategy, components, parameters)})";
+            return $"{UniquePureName(components)}_{suffix} ({UniqueNameHash(strategy, components, parameters)})";
         }
 
         public static string CamelCase(string s)
         {
+            if (s == "") return s;
             return s.First().ToString().ToUpper() + s.Substring(1).ToLower();
         }
 
