@@ -8,7 +8,7 @@ namespace SRFusionCore
 {
     public class FuseCommand : ConsoleCommand
     {
-        public override string Usage => "fuse <mode> <components> <parameters>";
+        public override string Usage => "fuse <mode> <components> <parameters>...";
         public override string ID => "fuse";
         public override string Description => "Create new slime definition using mod provided modes";
         public override bool Execute(string[] args)
@@ -42,13 +42,12 @@ namespace SRFusionCore
             {
                 components = FusionCore.GetPureSlimes(FusionCore.GetComponentSlimeNames(args[1]));
             }
-            if (args.Length < end + strat.parameters.Count)
+            if (args.Length < end + strat.types.Count)
             {
-                Log.Error("you must provide parameters in the form of: " + string.Join(" ", strat.parameters.Select(t => t.Name)));
+                Log.Error("you must provide parameters in the form of: " + string.Join(" ", strat.types.Select(t => t.type.Name)));
                 return false;
             }
-            var parameters = new List<Parameter>();
-            // TODO: implement parameters parsing
+            var parameters = args.Skip(end).Select((s,i) => new Parameter(strat.types[i], s)).ToList();
             Log.Debug($"Fusing in mode {strat.blame}... (on {string.Join(", ", components.Select(s => s.IdentifiableId.ToString()))}...) (with {string.Join(", ", parameters)}...)");
             var slime = FusionCore.InvokeStrategy(strat, components, parameters);
             Log.Info($"Produced fusion {slime.IdentifiableId}!");
@@ -56,11 +55,11 @@ namespace SRFusionCore
         }
         public override List<string> GetAutoComplete(int argIndex, string argText)
         {
+            Log.Debug(ConsoleWindow.cmdText);
             if (argIndex == 0)
                 return FusionCore.fusionStrats.Select(s => s.blame).ToList();
             if (argIndex == 1)
                 return FusionCore.pureSlimes.Keys.ToList();
-            Log.Debug(ConsoleWindow.cmdText);
             return base.GetAutoComplete(argIndex, argText);
         }
     }

@@ -59,7 +59,11 @@ namespace SRFusionCore
 
         public static void BlameStrategyForID(Identifiable.Id id, FusionStrategy strategy, List<SlimeDefinition> components, List<Parameter> parameters)
         {
-            // TODO: register stuff in the save registry
+            var data = new CompoundDataPiece(id.ToString());
+            data.SetValue("blame", strategy.blame);
+            data.SetValue("category", strategy.category);
+            data.SetValue("components", components.Select(s => s.IdentifiableId).ToArray());
+            data.SetValue("parameters", string.Join(" ", parameters.Select(p => p.ToString())));
         }
 
         public static SlimeDefinition InvokeStrategy(FusionStrategy strategy, List<SlimeDefinition> components, List<Parameter> parameters)

@@ -8,14 +8,14 @@ namespace SRFusionCore
     {
         public string blame;
         public string category;
-        public List<Type> parameters;
+        public List<Parameter.Type> types;
         public Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory;
 
-        public FusionStrategy(string blame, string category, List<Type> parameters, Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory)
+        public FusionStrategy(string blame, string category, List<Parameter.Type> parameters, Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory)
         {
             this.blame = blame;
             this.category = category;
-            this.parameters = parameters;
+            this.types = parameters;
             this.factory = factory;
         }
 
@@ -24,7 +24,7 @@ namespace SRFusionCore
             return obj is FusionStrategy other &&
                    blame == other.blame &&
                    category == other.category &&
-                   EqualityComparer<List<Type>>.Default.Equals(parameters, other.parameters) &&
+                   EqualityComparer<List<Parameter.Type>>.Default.Equals(types, other.types) &&
                    EqualityComparer<Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition>>.Default.Equals(factory, other.factory);
         }
 
@@ -33,25 +33,25 @@ namespace SRFusionCore
             int hashCode = 56328339;
             hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(blame);
             hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(category);
-            hashCode = hashCode * -1521134295 + EqualityComparer<List<Type>>.Default.GetHashCode(parameters);
+            hashCode = hashCode * -1521134295 + EqualityComparer<List<Parameter.Type>>.Default.GetHashCode(types);
             hashCode = hashCode * -1521134295 + EqualityComparer<Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition>>.Default.GetHashCode(factory);
             return hashCode;
         }
 
-        public void Deconstruct(out string blame, out string category, out List<Type> parameters, out Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory)
+        public void Deconstruct(out string blame, out string category, out List<Parameter.Type> parameters, out Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory)
         {
             blame = this.blame;
             category = this.category;
-            parameters = this.parameters;
+            parameters = this.types;
             factory = this.factory;
         }
 
-        public static implicit operator (string blame, string category, List<Type> parameters, Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory)(FusionStrategy value)
+        public static implicit operator (string blame, string category, List<Parameter.Type> parameters, Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory)(FusionStrategy value)
         {
-            return (value.blame, value.category, value.parameters, value.factory);
+            return (value.blame, value.category, value.types, value.factory);
         }
 
-        public static implicit operator FusionStrategy((string blame, string category, List<Type> parameters, Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory) value)
+        public static implicit operator FusionStrategy((string blame, string category, List<Parameter.Type> parameters, Func<List<SlimeDefinition>, List<Parameter>, SlimeDefinition> factory) value)
         {
             return new FusionStrategy(value.blame, value.category, value.parameters, value.factory);
         }
