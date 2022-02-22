@@ -13,6 +13,9 @@ namespace SRFusionCore
         public override void PreLoad()
         {
             HarmonyInstance.PatchAll();
+            SaveRegistry.RegisterWorldDataLoadDelegate(FusionCore.OnWorldDataLoad);
+            SaveRegistry.RegisterWorldDataSaveDelegate(FusionCore.OnWorldDataSave);
+            EnumTranslator.RegisterFallbackHandler<Identifiable.Id>(FusionCore.ResolveMissingID);
         }
 
         [HarmonyPatch(typeof(SRModLoader), nameof(SRModLoader.LoadMods))]
@@ -21,9 +24,6 @@ namespace SRFusionCore
             public static void Postfix()
             {
                 FusionCore.Setup();
-                SaveRegistry.RegisterWorldDataLoadDelegate(FusionCore.OnWorldDataLoad);
-                SaveRegistry.RegisterWorldDataSaveDelegate(FusionCore.OnWorldDataSave);
-                EnumTranslator.RegisterFallbackHandler<Identifiable.Id>(FusionCore.ResolveMissingID);
             }
         }
 

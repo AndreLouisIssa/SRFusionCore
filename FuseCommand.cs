@@ -38,7 +38,7 @@ namespace SRFusionCore
             var parameters = new List<Parameter>();
             // TODO: implement parameters parsing
             Log.Debug($"Fusing in mode {strat.blame}... (on {string.Join(", ", components.Select(s => s.IdentifiableId.ToString()))}...) (with {string.Join(", ", parameters)}...)");
-            var slime = strat.factory(components, parameters);
+            var slime = FusionCore.InvokeStrategy(strat, components, parameters);
             Log.Info($"Produced fusion {slime.IdentifiableId}!");
             return true;
         }

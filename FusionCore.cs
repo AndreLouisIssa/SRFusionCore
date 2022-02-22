@@ -9,26 +9,33 @@ namespace SRFusionCore
 {
     public static class FusionCore
     {
-        public static readonly Dictionary<string,SlimeDefinition> pureSlimes = new Dictionary<string,SlimeDefinition>();
+        public static readonly List<FusionStrategy> fusionStrats = new List<FusionStrategy>();
+        public static readonly Dictionary<string, SlimeDefinition> pureSlimes = new Dictionary<string, SlimeDefinition>();
         public static readonly List<Identifiable.Id> exemptSlimes = new List<Identifiable.Id>
         {
             Identifiable.Id.GLITCH_TARR_SLIME,
             Identifiable.Id.TARR_SLIME
         };
-        public static readonly List<FusionStrategy> fusionStrats = new List<FusionStrategy>();
-        public static readonly CompoundDataPiece worldData = new CompoundDataPiece();
 
-        public static void OnWorldDataSave(CompoundDataPiece data)
+        public static readonly CompoundDataPiece worldData = new CompoundDataPiece("");
+        public static void OnWorldDataSave(CompoundDataPiece data) { data.data = worldData.data; }
+        public static void OnWorldDataLoad(CompoundDataPiece data) { worldData.data = data.data; }
+
+        public static string AdjustCategoryName(string original)
         {
-            data.data = worldData.data;
+            if (worldData.HasPiece(original))
+                return "_" + worldData.GetValue<CompoundDataPiece>(original).GetValue<string>("category");
+            return original;
         }
 
-        public static void OnWorldDataLoad(CompoundDataPiece data)
+        public static Identifiable.Id NewIdentifiableID(string name)
         {
-            worldData.data = data.data;
+            if (Enum.IsDefined(typeof(Identifiable.Id), name)) throw new Exception($"{nameof(SRFusionCore)}: ID already exists: {name}");
+            Main.SRModLoader_get_CurrentLoadingStep._override = true;
+            var id = IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name);
+            Main.SRModLoader_get_CurrentLoadingStep._override = false;
+            return id;
         }
-
-        public static readonly List<FusionStrategy> strategies = new List<FusionStrategy>();
 
         public static bool ResolveMissingID(ref string value)
         {
@@ -50,11 +57,16 @@ namespace SRFusionCore
             return valid;
         }
 
-        public static string AdjustCategoryName(string original)
+        public static void BlameStrategyForID(Identifiable.Id id, FusionStrategy strategy, List<SlimeDefinition> components, List<Parameter> parameters)
         {
-            if (worldData.HasPiece(original))
-                return "_" + worldData.GetValue<CompoundDataPiece>(original).GetValue<string>("category");
-            return original;
+            // TODO: register stuff in the save registry
+        }
+
+        public static SlimeDefinition InvokeStrategy(FusionStrategy strategy, List<SlimeDefinition> components, List<Parameter> parameters)
+        {
+            var slime = strategy.factory(components, parameters);
+            if (!Levels.isMainMenu()) BlameStrategyForID(slime.IdentifiableId, strategy, components, parameters);
+            return slime;
         }
 
         private static List<SlimeDefinition> GetComponents(IEnumerable<Identifiable.Id> ids)
@@ -64,7 +76,7 @@ namespace SRFusionCore
 
         private static List<Parameter> GetParameters(string v)
         {
-            //TODO: Implement this
+            // TODO: Implement this
             return new List<Parameter>();
         }
 
@@ -73,7 +85,7 @@ namespace SRFusionCore
             SlimeDefinitions defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
             foreach (var pure in defns.Slimes.Where(slime => !slime.IsLargo && !exemptSlimes.Contains(slime.IdentifiableId)))
             {
-                pureSlimes.Add(PureName(pure.IdentifiableId.ToString()),pure);
+                pureSlimes.Add(PureName(pure.IdentifiableId.ToString()), pure);
             }
         }
 
@@ -125,15 +137,6 @@ namespace SRFusionCore
         {
             Decompose(PureName(name), pureSlimes.Keys, out string rest);
             return rest.Replace("_", "") == "";
-        }
-
-        public static Identifiable.Id NewIdentifiableID(string name)
-        {
-            if (Enum.IsDefined(typeof(Identifiable.Id), name)) throw new Exception($"{nameof(SRFusionCore)}: ID already exists: {name}");
-            Main.SRModLoader_get_CurrentLoadingStep._override = true;
-            var id = IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name);
-            Main.SRModLoader_get_CurrentLoadingStep._override = false;
-            return id;
         }
     }
 }
