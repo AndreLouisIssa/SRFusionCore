@@ -13,7 +13,6 @@ namespace FusionCore
         public override string Description => "Create new slime definition using mod provided modes";
         public override bool Execute(string[] args)
         {
-
             if (args == null || args.Length < 1)
             {
                 Log.Error("you must specify a mode to fuse using");
@@ -30,6 +29,7 @@ namespace FusionCore
                 Log.Error("you must specify the desired combined slime name (ex: PINK_ROCK) or a list of pure slime names enclosed in brackets (ex: '[PINK, ROCK]')");
                 return false;
             }
+            args = args.Select(s => s.ToUpper()).ToArray();
             var end = 1;
             List<SlimeDefinition> components = null;
             if (args[1].StartsWith("["))
@@ -47,7 +47,7 @@ namespace FusionCore
                 Log.Error("you must provide parameters in the form of: " + string.Join(" ", strat.types.Select(t => t.type.Name)));
                 return false;
             }
-            var parameters = args.Skip(end).Select((s,i) => new Parameter(strat.types[i], s)).ToList();
+            var parameters = Core.GetParameters(strat, args.Skip(end + 1));
             Log.Debug($"Fusing in mode {strat.blame}... (on {string.Join(", ", components.Select(s => s.IdentifiableId.ToString()))}...) (with {string.Join(", ", parameters)}...)");
             var slime = Core.InvokeStrategy(strat, components, parameters);
             Log.Info($"Produced fusion {slime.IdentifiableId}!");

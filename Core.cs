@@ -4,6 +4,7 @@ using SRML.SR.SaveSystem.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace FusionCore
@@ -40,7 +41,6 @@ namespace FusionCore
 
         public static bool ResolveMissingID(ref string value)
         {
-            Log.Info($"{value} : {AllComponentsExist(value)}");
             bool valid = AllComponentsExist(value);
             if (valid)
             {
@@ -78,7 +78,8 @@ namespace FusionCore
 
         public static List<SlimeDefinition> GetComponents(IEnumerable<Identifiable.Id> ids)
         {
-            return ids.Select(i => SRSingleton<GameContext>.Instance.SlimeDefinitions.GetSlimeByIdentifiableId(i)).ToList();
+            var defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
+            return ids.Select(i => defns.GetSlimeByIdentifiableId(i)).ToList();
         }
 
         public static List<Parameter> GetParameters(Strategy strat, string msg)
@@ -103,7 +104,7 @@ namespace FusionCore
         public static string PureName(string name)
         {
             name = name.Replace("_SLIME", "").Replace("_LARGO", "");
-            if (name.Contains('_')) name = '+' + name + '+';
+            //if (name.Contains('_')) name = '+' + name + '+';
             return name;
         }
 
@@ -178,7 +179,26 @@ namespace FusionCore
 
         public static string UniqueName(string suffix, Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
-            return $"{UniquePureName(components)}_{suffix} ({UniqueNameHash(strategy, components, parameters)})";
+            return $"{UniquePureName(components)}_{suffix} ({Base36(UniqueNameHash(strategy, components, parameters))})";
+        }
+
+        public static string Base36(int value)
+        {
+            //important for negative hashes
+            int mod(int a, int b) => a < 0 ? b + (a % b) : a % b;
+
+            //https://stackoverflow.com/a/33729594
+            var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            var n = chars.Length;
+            var result = new StringBuilder();
+
+            while (value != 0)
+            {
+                result.Append(chars[mod(value, n)]);
+                value = value / n;
+            }
+
+            return result.ToString();
         }
 
         public static string CamelCase(string s)
