@@ -4,6 +4,7 @@ using SRML.SR.SaveSystem.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace FusionCore
 {
@@ -39,6 +40,7 @@ namespace FusionCore
 
         public static bool ResolveMissingID(ref string value)
         {
+            Log.Info($"{value} : {AllComponentsExist(value)}");
             bool valid = AllComponentsExist(value);
             if (valid)
             {
@@ -50,7 +52,7 @@ namespace FusionCore
                     Log.Error($"{nameof(FusionCore)}: No strategy {blame} to fix missing ID {value}!");
                     return false;
                 }
-                var parameters = GetParameters(data.GetValue<string>("parameters"));
+                var parameters = GetParameters(strat, data.GetValue<string>("parameters"));
                 var components = GetComponents(data.GetValue<Identifiable.Id[]>("components"));
                 value = strat.factory(components, parameters).IdentifiableId.ToString();
             }
@@ -66,22 +68,27 @@ namespace FusionCore
             data.SetValue("parameters", string.Join(" ", parameters.Select(p => p.ToString())));
         }
 
-        public static SlimeDefinition InvokeStrategy(Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters)
+        public static SlimeDefinition InvokeStrategy(Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
+            parameters = parameters ?? new List<Parameter>();
             var slime = strategy.factory(components, parameters);
             if (!Levels.isMainMenu()) BlameStrategyForID(slime.IdentifiableId, strategy, components, parameters);
             return slime;
         }
 
-        private static List<SlimeDefinition> GetComponents(IEnumerable<Identifiable.Id> ids)
+        public static List<SlimeDefinition> GetComponents(IEnumerable<Identifiable.Id> ids)
         {
             return ids.Select(i => SRSingleton<GameContext>.Instance.SlimeDefinitions.GetSlimeByIdentifiableId(i)).ToList();
         }
 
-        private static List<Parameter> GetParameters(string v)
+        public static List<Parameter> GetParameters(Strategy strat, string msg)
         {
-            // TODO: Implement this
-            return new List<Parameter>();
+            return GetParameters(strat, msg.Split(' '));
+        }
+
+        public static List<Parameter> GetParameters(Strategy strat, IEnumerable<string> args)
+        {
+            return args.Select((s, i) => new Parameter(strat.types[i], s)).ToList();
         }
 
         public static void Setup()
@@ -171,7 +178,18 @@ namespace FusionCore
 
         public static string UniqueName(string suffix, Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
-            return $"{UniquePureName(components)}_{suffix}({UniqueNameHash(strategy, components, parameters)})"; 
+            return $"{UniquePureName(components)}_{suffix}({UniqueNameHash(strategy, components, parameters)})";
+        }
+
+        public static string CamelCase(string s)
+        {
+            return s.First().ToString().ToUpper() + s.Substring(1).ToLower();
+        }
+
+        public static string DisplayName(string suffix, List<SlimeDefinition> components)
+        {
+            var name = Regex.Replace(UniquePureName(components) + "_" + suffix, "[_+]+", " ");
+            return string.Join(" ", name.Split(' ').Select(CamelCase));
         }
     }
 }
