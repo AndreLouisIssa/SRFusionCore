@@ -2,6 +2,7 @@ using SRML;
 using SRML.SR;
 using SRML.SR.SaveSystem.Data;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,7 +22,14 @@ namespace FusionCore
 
         public static readonly CompoundDataPiece worldData = new CompoundDataPiece("");
         public static void OnWorldDataSave(CompoundDataPiece data) { data.data = worldData.data; }
-        public static void OnWorldDataLoad(CompoundDataPiece data) { worldData.data = data.data; }
+        public static void OnWorldDataLoad(CompoundDataPiece data)
+        {
+            foreach (var p in data.DataList)
+            {
+                if (worldData.DataList.Contains(p)) worldData.DataList.Remove(p);
+                worldData.DataList.Add(p);
+            }
+        }
 
         public static string AdjustCategoryName(string original)
         {
@@ -42,11 +50,13 @@ namespace FusionCore
         public static void SetDisplayName(this SlimeDefinition slime, string name)
         {
             var entry = "l." + slime.IdentifiableId.ToString().ToLower();
-            if (TranslationPatcher.doneDictionaries["actor"].ContainsKey(entry))
+            var hasDone = TranslationPatcher.doneDictionaries.ContainsKey("actor");
+            if (hasDone && TranslationPatcher.doneDictionaries["actor"].ContainsKey(entry))
                 TranslationPatcher.doneDictionaries["actor"].Remove(entry);
             InvokeAsStep(() => TranslationPatcher.AddActorTranslation(entry, name));
-            TranslationPatcher.doneDictionaries["actor"][entry] = name;
-            TranslationPatcher.patches["actor"][entry] = name;
+            if (hasDone) TranslationPatcher.doneDictionaries["actor"][entry] = name;
+            if (TranslationPatcher.patches.ContainsKey("actor"))
+                TranslationPatcher.patches["actor"][entry] = name;
         }
 
         public static bool ResolveMissingID(ref string value)
@@ -54,12 +64,17 @@ namespace FusionCore
             bool valid = AllComponentsExist(value);
             if (valid)
             {
+                if (!worldData.HasPiece(value))
+                {
+                    Log.Error($"{nameof(FusionCore)}: No strategy saved to fix missing ID {value}!");
+                    return false;
+                }
                 var data = worldData.GetValue<CompoundDataPiece>(value);
                 var blame = data.GetValue<string>("blame");
                 var strat = fusionStrats.FirstOrDefault(s => s.blame == blame);
                 if (strat is null)
                 {
-                    Log.Error($"{nameof(FusionCore)}: No strategy {blame} to fix missing ID {value}!");
+                    Log.Error($"{nameof(FusionCore)}: No strategy '{blame}' exists to fix missing ID {value}!");
                     return false;
                 }
                 var parameters = GetParameters(strat, data.GetValue<string>("parameters"));
@@ -76,13 +91,41 @@ namespace FusionCore
             data.SetValue("category", strategy.category);
             data.SetValue("components", components.Select(s => s.IdentifiableId).ToArray());
             data.SetValue("parameters", string.Join(" ", parameters.Select(p => p.ToString())));
+            worldData.AddPiece(data);
+        }
+
+        public static void LogCompoundDataPiece(CompoundDataPiece data, string indent = "  ", Action<string> log = null, string level = "")
+        {
+            if (log is null) log = (s) => Log.Info(s);
+            var key = data.key;
+            if (key != "") key += " = ";
+            log($"{level}{key}{{");
+            var _level = level + indent;
+            foreach (var p in data.DataList)
+            {
+                key = p.key;
+                if (key != "") key += " = ";
+                if (p is CompoundDataPiece c)
+                    LogCompoundDataPiece(c, indent, log, _level);
+                else if (p.data is string s)
+                    log($"{_level}{key}\"{p.data}\"");
+                else if (p.data is IEnumerable e)
+                {
+                    var l = new List<string> { };
+                    foreach (var v in e) l.Add(v.ToString());
+                    log($"{_level}{key}[{string.Join(", ", l)}]");
+                }
+                else
+                    log($"{_level}{key}{p.data}");
+            }
+            log(level + "}");
         }
 
         public static SlimeDefinition InvokeStrategy(this Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
             parameters = parameters ?? new List<Parameter>();
             var slime = strategy.factory(components, parameters);
-            if (!Levels.isMainMenu()) BlameStrategyForID(strategy, slime.IdentifiableId, components, parameters);
+            BlameStrategyForID(strategy, slime.IdentifiableId, components, parameters);
             return slime;
         }
 
