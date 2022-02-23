@@ -6,9 +6,9 @@ namespace FusionCore
     {
         public class Type
         {
-            public System.Type type;
-            public Func<string, object> parse;
-            public Func<object, string> represent = (v) => v.ToString();
+            public readonly System.Type type;
+            public readonly Func<string, object> parse;
+            public readonly Func<object, string> represent = (v) => v.ToString();
             public Type(System.Type type, Func<string, object> parse, Func<object, string> represent = null)
             {
                 this.type = type; this.parse = parse; this.represent = represent ?? this.represent;
@@ -22,15 +22,15 @@ namespace FusionCore
         }
 
         public readonly Type type;
-        public readonly object value;
+        public readonly dynamic value;
 
-        public Parameter(Type type, object value)
+        public Parameter(Type type, dynamic value)
         {
-            this.type = type; this.value = value;
+            this.type = type; this.value = (dynamic)Convert.ChangeType(value, type.type);
         }
         public Parameter(Type type, string value)
         {
-            this.type = type; this.value = type.parse(value);
+            this.type = type; this.value = (dynamic)Convert.ChangeType(type.parse(value), type.type);
         }
 
         public override string ToString()
