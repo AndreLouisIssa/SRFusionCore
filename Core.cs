@@ -99,7 +99,7 @@ namespace FusionCore
 
         public static List<Parameter> GetParameters(this Strategy strat, IEnumerable<string> args)
         {
-            return args.Select((s, i) => new Parameter(strat.types[i], s)).ToList();
+            return args.Select((s, i) => Parameter.Parse(strat.types[i], s)).ToList();
         }
 
         public static void Setup()

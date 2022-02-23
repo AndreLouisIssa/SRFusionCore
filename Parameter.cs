@@ -28,9 +28,10 @@ namespace FusionCore
         {
             this.type = type; this.value = (dynamic)Convert.ChangeType(value, type.type);
         }
-        public Parameter(Type type, string value)
+        
+        public static Parameter Parse(Type type, string value)
         {
-            this.type = type; this.value = (dynamic)Convert.ChangeType(type.parse(value), type.type);
+            return new Parameter(type, type.parse(value));
         }
 
         public override string ToString()
