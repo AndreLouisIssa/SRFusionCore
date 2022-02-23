@@ -39,6 +39,18 @@ namespace FusionCore
             return id;
         }
 
+        public static void SetDisplayName(this SlimeDefinition slime, string name)
+        {
+            var entry = "l." + slime.IdentifiableId.ToString().ToLower();
+            if (TranslationPatcher.doneDictionaries["actor"].ContainsKey(entry))
+                TranslationPatcher.doneDictionaries["actor"].Remove(entry);
+            Main.SRModLoader_get_CurrentLoadingStep._override = true;
+            TranslationPatcher.AddActorTranslation(entry, name);
+            TranslationPatcher.doneDictionaries["actor"][entry] = name;
+            TranslationPatcher.patches["actor"][entry] = name;
+            Main.SRModLoader_get_CurrentLoadingStep._override = false;
+        }
+
         public static bool ResolveMissingID(ref string value)
         {
             bool valid = AllComponentsExist(value);
@@ -59,7 +71,7 @@ namespace FusionCore
             return valid;
         }
 
-        public static void BlameStrategyForID(Identifiable.Id id, Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters)
+        public static void BlameStrategyForID(this Strategy strategy, Identifiable.Id id, List<SlimeDefinition> components, List<Parameter> parameters)
         {
             var data = new CompoundDataPiece(id.ToString());
             data.SetValue("blame", strategy.blame);
@@ -68,11 +80,11 @@ namespace FusionCore
             data.SetValue("parameters", string.Join(" ", parameters.Select(p => p.ToString())));
         }
 
-        public static SlimeDefinition InvokeStrategy(Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
+        public static SlimeDefinition InvokeStrategy(this Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
             parameters = parameters ?? new List<Parameter>();
             var slime = strategy.factory(components, parameters);
-            if (!Levels.isMainMenu()) BlameStrategyForID(slime.IdentifiableId, strategy, components, parameters);
+            if (!Levels.isMainMenu()) BlameStrategyForID(strategy, slime.IdentifiableId, components, parameters);
             return slime;
         }
 
@@ -82,12 +94,12 @@ namespace FusionCore
             return ids.Select(i => defns.GetSlimeByIdentifiableId(i)).ToList();
         }
 
-        public static List<Parameter> GetParameters(Strategy strat, string msg)
+        public static List<Parameter> GetParameters(this Strategy strat, string msg)
         {
             return GetParameters(strat, msg.Split(' '));
         }
 
-        public static List<Parameter> GetParameters(Strategy strat, IEnumerable<string> args)
+        public static List<Parameter> GetParameters(this Strategy strat, IEnumerable<string> args)
         {
             return args.Select((s, i) => new Parameter(strat.types[i], s)).ToList();
         }
@@ -171,13 +183,13 @@ namespace FusionCore
             return string.Join("_", components.Select(c => PureName(c.IdentifiableId.ToString())));
         }
 
-        public static int UniqueNameHash(Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
+        public static int UniqueNameHash(this Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
             var hash = (parameters is null) ? 0 : parameters.Select(p => p.GetHashCode()).Aggregate((h1, h2) => 13 * h1 + h2);
             return hash + components.Select(c => c.IdentifiableId.GetHashCode()).Aggregate((h1, h2) => 11 * h1 + h2) + 27 * strategy.GetHashCode();
         }
 
-        public static string UniqueName(string suffix, Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
+        public static string UniqueName(this Strategy strategy, string suffix, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
             return $"{UniquePureName(components)}_{suffix}_{Base36(UniqueNameHash(strategy, components, parameters))}";
         }
