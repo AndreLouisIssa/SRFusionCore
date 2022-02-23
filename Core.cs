@@ -30,12 +30,12 @@ namespace FusionCore
             return original;
         }
 
-        public static Identifiable.Id NewIdentifiableID(string name)
+        public static Identifiable.Id NewIdentifiableID(string name, SRMod mod = null)
         {
             if (Enum.IsDefined(typeof(Identifiable.Id), name)) throw new Exception($"{nameof(FusionCore)}: ID already exists: {name}");
-            Main.SRModLoader_get_CurrentLoadingStep._override = true;
-            var id = IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name);
-            Main.SRModLoader_get_CurrentLoadingStep._override = false;
+            var id = InvokeAsStep(() => IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name));
+            if (mod is null) mod = SRMod.GetCurrentMod();
+            IdentifiableRegistry.moddedIdentifiables[id] = mod;
             return id;
         }
 
@@ -44,11 +44,9 @@ namespace FusionCore
             var entry = "l." + slime.IdentifiableId.ToString().ToLower();
             if (TranslationPatcher.doneDictionaries["actor"].ContainsKey(entry))
                 TranslationPatcher.doneDictionaries["actor"].Remove(entry);
-            Main.SRModLoader_get_CurrentLoadingStep._override = true;
-            TranslationPatcher.AddActorTranslation(entry, name);
+            InvokeAsStep(() => TranslationPatcher.AddActorTranslation(entry, name));
             TranslationPatcher.doneDictionaries["actor"][entry] = name;
             TranslationPatcher.patches["actor"][entry] = name;
-            Main.SRModLoader_get_CurrentLoadingStep._override = false;
         }
 
         public static bool ResolveMissingID(ref string value)
@@ -223,6 +221,23 @@ namespace FusionCore
         {
             var name = Regex.Replace(UniquePureName(components) + "_" + suffix, "[_+]+", " ");
             return string.Join(" ", name.Split(' ').Select(CamelCase));
+        }
+
+        public static void InvokeAsStep(Action run, SRModLoader.LoadingStep step = SRModLoader.LoadingStep.PRELOAD)
+        {
+            Main.SRModLoader_get_CurrentLoadingStep._override = true;
+            Main.SRModLoader_get_CurrentLoadingStep._step = step;
+            run();
+            Main.SRModLoader_get_CurrentLoadingStep._override = false;
+        }
+
+        public static T InvokeAsStep<T>(Func<T> run, SRModLoader.LoadingStep step = SRModLoader.LoadingStep.PRELOAD)
+        {
+            Main.SRModLoader_get_CurrentLoadingStep._override = true;
+            Main.SRModLoader_get_CurrentLoadingStep._step = step;
+            var value = run();
+            Main.SRModLoader_get_CurrentLoadingStep._override = false;
+            return value;
         }
     }
 }

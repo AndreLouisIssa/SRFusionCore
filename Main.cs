@@ -34,9 +34,10 @@ namespace FusionCore
         public class SRModLoader_get_CurrentLoadingStep
         {
             public static bool _override = false;
+            public static SRModLoader.LoadingStep _step = SRModLoader.LoadingStep.PRELOAD;
             public static void Postfix(ref SRModLoader.LoadingStep __result)
             {
-                if (_override) __result = SRModLoader.LoadingStep.PRELOAD;
+                if (_override) __result = _step;
             }
         }
 
