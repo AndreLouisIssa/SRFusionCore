@@ -113,7 +113,7 @@ namespace FusionCore
 
         public static string PureName(string name)
         {
-            name = name.Replace("_SLIME", "").Replace("_LARGO", "");
+            name = Regex.Replace(name, @"((_SLIME)|(_LARGO)).*", "");
             //if (name.Contains('_')) name = '+' + name + '+';
             return name;
         }
@@ -178,7 +178,7 @@ namespace FusionCore
 
         public static string UniquePureName(List<SlimeDefinition> components)
         {
-            return string.Join("_", components.Select(c => PureName(c.IdentifiableId.ToString())));
+            return string.Join("_", components.SelectMany(c => GetComponentSlimeNames(c.IdentifiableId.ToString())).Select(PureName));
         }
 
         public static int UniqueNameHash(this Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
@@ -189,22 +189,20 @@ namespace FusionCore
 
         public static string UniqueName(this Strategy strategy, string suffix, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
-            return $"{UniquePureName(components)}_{suffix}_{Base36(UniqueNameHash(strategy, components, parameters))}";
+            return $"{UniquePureName(components)}_{suffix}_{EncodeHash(UniqueNameHash(strategy, components, parameters))}";
         }
 
-        public static string Base36(int value)
+        public static string EncodeHash(int value)
         {
-            //important for negative hashes
-            int mod(int a, int b) => a < 0 ? b + (a % b) : a % b;
-
             //https://stackoverflow.com/a/33729594
-            var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            var chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
             var n = chars.Length;
-            var result = new StringBuilder();
+            var result = new StringBuilder(value < 0 ? "-" : "");
+            value = Math.Abs(value);
 
             while (value != 0)
             {
-                result.Append(chars[mod(value, n)]);
+                result.Append(chars[value % n]);
                 value = value / n;
             }
 
