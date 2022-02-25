@@ -50,9 +50,20 @@ namespace FusionCore
             return id;
         }
 
+        public static SlimeDefinition GetSlimeByFullName(string name)
+        {
+            SlimeDefinitions defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
+            return defns.GetSlimeByIdentifiableId((Identifiable.Id)Enum.Parse(typeof(Identifiable.Id), name));
+        }
+
+        public static string GetFullName(this SlimeDefinition slime)
+        {
+            return slime.IdentifiableId.ToString();
+        }
+
         public static void SetDisplayName(this SlimeDefinition slime, string name)
         {
-            var entry = "l." + slime.IdentifiableId.ToString().ToLower();
+            var entry = "l." + slime.GetFullName().ToLower();
             var hasDone = TranslationPatcher.doneDictionaries.ContainsKey("actor");
             if (hasDone && TranslationPatcher.doneDictionaries["actor"].ContainsKey(entry))
                 TranslationPatcher.doneDictionaries["actor"].Remove(entry);
@@ -62,26 +73,43 @@ namespace FusionCore
                 TranslationPatcher.patches["actor"][entry] = name;
         }
 
+        public static string GetDisplayName(this SlimeDefinition slime, out Dictionary<string, string> dict)
+        {
+            var entry = "l." + slime.GetFullName().ToLower();
+            dict = null;
+            if (TranslationPatcher.doneDictionaries.ContainsKey("actor") && (dict = TranslationPatcher.doneDictionaries["actor"]).ContainsKey(entry))
+            {
+                return TranslationPatcher.doneDictionaries["actor"][entry];
+            }
+            if (TranslationPatcher.patches.ContainsKey("actor") && (dict = TranslationPatcher.patches["actor"]).ContainsKey(entry))
+                return TranslationPatcher.patches["actor"][entry];
+            return null;
+        }
+
+        public static string GetDisplayName(this SlimeDefinition slime)
+        {
+            return GetDisplayName(slime, out _);
+        }
+
         public static bool ResolveMissingID(ref string value)
         {
-            if (!worldData.HasPiece(value)) return false;
-            int i = 0;
-            Log.Info("CHECK " + (i++).ToString());
+            Log.Info($"{nameof(FusionCore)}: Attempting to resolve missing ID {value}");
+            if (!worldData.HasPiece(value))
+            {
+                Log.Warning($"{nameof(FusionCore)}: Does not recognise missing ID {value}");
+                return false;
+            }
             var data = worldData.GetCompoundPiece(value);
-            Log.Info("CHECK " + (i++).ToString());
             var blame = data.GetValue<string>("blame");
-            Log.Info("CHECK " + (i++).ToString());
             var strat = fusionStrats.FirstOrDefault(s => s.blame == blame);
             if (strat is null)
             {
                 Log.Error($"{nameof(FusionCore)}: No strategy '{blame}' exists to fix missing ID {value}!");
                 return false;
             }
-            Log.Info("CHECK " + (i++).ToString());
             var components = GetComponents(data.GetValue<string[]>("components"));
-            Log.Info("CHECK " + (i++).ToString());
             var parameters = GetParameters(strat, data.GetValue<string[]>("parameters"));
-            value = strat.factory(components, parameters).IdentifiableId.ToString();
+            value = strat.factory(components, parameters).GetFullName();
             return true;
         }
 
@@ -90,7 +118,7 @@ namespace FusionCore
             var data = new CompoundDataPiece(id.ToString());
             data.SetValue("blame", strategy.blame);
             data.SetValue("category", strategy.category);
-            data.SetValue("components", components.Select(s => s.IdentifiableId.ToString()).ToArray());
+            data.SetValue("components", components.Select(GetFullName).ToArray());
             data.SetValue("parameters", parameters.Select(p => p.ToString()).ToArray());
             worldData.AddPiece(data);
         }
@@ -140,6 +168,7 @@ namespace FusionCore
         public static SlimeDefinition InvokeStrategy(this Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
             parameters = parameters ?? new List<Parameter>();
+            components = components.SelectMany(c => PureSlimeFullNames(c.GetFullName()).Select(GetSlimeByFullName)).ToList();
             var slime = strategy.factory(components, parameters);
             BlameStrategyForID(strategy, slime.IdentifiableId, components, parameters);
             return slime;
@@ -161,14 +190,13 @@ namespace FusionCore
             SlimeDefinitions defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
             foreach (var pure in defns.Slimes.Where(slime => !slime.IsLargo && !exemptSlimes.Contains(slime.IdentifiableId)))
             {
-                pureSlimes.Add(PureName(pure.IdentifiableId.ToString()), pure);
+                pureSlimes.Add(PureName(pure.GetFullName()), pure);
             }
         }
 
         public static string PureName(string name)
         {
             name = Regex.Replace(name, @"((_SLIME)|(_LARGO)).*", "");
-            //if (name.Contains('_')) name = '+' + name + '+';
             return name;
         }
 
@@ -194,35 +222,33 @@ namespace FusionCore
             return Decompose(body, parts, out _);
         }
 
-        public static List<string> GetComponentSlimeNames(Identifiable.Id slimeId)
+        public static List<string> DecomposePureSlimeNames(string name)
         {
-            return GetComponentSlimeNames(slimeId.ToString());
+            return Decompose(PureName(name), pureSlimes.Keys);
         }
 
-        public static List<string> GetComponentSlimeNames(string name)
+        public static List<string> DecomposePureSlimeFullNames(string name)
         {
-            return Decompose(name.Replace("_SLIME", "").Replace("_LARGO", ""), pureSlimes.Keys);
+            return DecomposePureSlimeNames(name).Select(n => pureSlimes[n]).Select(GetFullName).ToList();
         }
 
-        public static List<SlimeDefinition> GetPureSlimes(List<string> slimeNames)
+        public static List<string> PureSlimeFullNames(string name)
         {
-            return slimeNames.Select(n => pureSlimes[n]).ToList();
+            if (worldData.HasPiece(name))
+            {
+                return worldData.GetCompoundPiece(name).GetValue<string[]>("components").ToList();
+            }
+            return DecomposePureSlimeFullNames(name);
         }
 
-        public static List<SlimeDefinition> GetPureSlimes(string name)
+        public static List<string> PureSlimeFullNames(IEnumerable<string> names)
         {
-            return GetPureSlimes(GetComponentSlimeNames(name));
+            return names.SelectMany(PureSlimeFullNames).ToList();
         }
 
-        public static List<SlimeDefinition> GetPureSlimes(Identifiable.Id slimeId)
+        public static List<string> PureSlimeFullNames(params string[] names)
         {
-            return GetPureSlimes(GetComponentSlimeNames(slimeId));
-        }
-
-        public static bool AllComponentsExist(string name)
-        {
-            Decompose(PureName(name), pureSlimes.Keys, out string rest);
-            return rest.Replace("_", "") == "";
+            return PureSlimeFullNames(names);
         }
 
         public static bool PureNameExists(string name)
@@ -230,20 +256,20 @@ namespace FusionCore
             return pureSlimes.Keys.Contains(PureName(name));
         }
 
-        public static string UniquePureName(List<SlimeDefinition> components)
+        public static string UniqueFirstName(List<SlimeDefinition> components)
         {
-            return string.Join("_", components.SelectMany(c => GetComponentSlimeNames(c.IdentifiableId.ToString())).Select(PureName));
+            return string.Join("_", components.SelectMany(c => DecomposePureSlimeNames(c.GetFullName())).Select(PureName));
         }
 
-        public static int UniqueNameHash(this Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
+        public static int UniqueSurnameHash(this Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
             var hash = (parameters is null) ? 0 : parameters.Select(p => p.GetHashCode()).Aggregate((h1, h2) => 13 * h1 + h2);
             return hash + components.Select(c => c.IdentifiableId.GetHashCode()).Aggregate((h1, h2) => 11 * h1 + h2) + 27 * strategy.GetHashCode();
         }
 
-        public static string UniqueName(this Strategy strategy, string suffix, List<SlimeDefinition> components, List<Parameter> parameters = null)
+        public static string UniqueFullName(this Strategy strategy, string suffix, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
-            return $"{UniquePureName(components)}_{suffix}_{EncodeHash(UniqueNameHash(strategy, components, parameters))}";
+            return $"{UniqueFirstName(components)}_{suffix}_{EncodeHash(UniqueSurnameHash(strategy, components, parameters))}";
         }
 
         public static string EncodeHash(int value)
@@ -251,7 +277,7 @@ namespace FusionCore
             //https://stackoverflow.com/a/33729594
             var chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
             var n = chars.Length;
-            var result = new StringBuilder(value < 0 ? "-" : "");
+            var result = new StringBuilder();
             value = Math.Abs(value);
 
             while (value != 0)
@@ -263,16 +289,32 @@ namespace FusionCore
             return result.ToString();
         }
 
-        public static string CamelCase(string s)
+        public static string TitleCase(string s)
         {
             if (s == "") return s;
+            if (s.Contains(' '))
+            {
+                return string.Join(" ", s.Split(' ').Select(TitleCase));
+            }
+            if (s.Contains('-'))
+            {
+                return string.Join("-", s.Split('-').Select(TitleCase));
+            }
             return s.First().ToString().ToUpper() + s.Substring(1).ToLower();
+        }
+
+        public static string DebugName(this Strategy strat, SlimeDefinition slime)
+        {
+            var display = slime.GetDisplayName();
+            if (display != null) display = "\"" + display + "\"";
+            else display = "<MISSING DISPLAY NAME>";
+            return $"{TitleCase(strat.category)}: {display} ({slime.IdentifiableId})";
         }
 
         public static string DisplayName(string suffix, List<SlimeDefinition> components)
         {
-            var name = Regex.Replace(UniquePureName(components) + "_" + suffix, "[_+]+", " ");
-            return string.Join(" ", name.Split(' ').Select(CamelCase));
+            return TitleCase(string.Join(" ", PureSlimeFullNames(components.Select(GetFullName))
+                .Select(GetSlimeByFullName).Select(s => GetDisplayName(s) ?? s.GetFullName().Replace("_", " ")).Select(s => s.Substring(0,s.LastIndexOf(' '))).Append(suffix)));
         }
 
         public static void InvokeAsStep(Action run, SRModLoader.LoadingStep step = SRModLoader.LoadingStep.PRELOAD)

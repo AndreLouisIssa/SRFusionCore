@@ -26,31 +26,23 @@ namespace FusionCore
             }
             if (args.Length < 2)
             {
-                Log.Error("you must specify the desired combined slime name (ex: PINK_ROCK) or a list of pure slime names enclosed in brackets (ex: '[PINK, ROCK]')");
+                Log.Error("you must specify the hyphen-separated list of pure slime names without spaces (ex: 'Pink-Rock')");
                 return false;
             }
             args = args.Select(s => s.ToUpper()).ToArray();
-            var end = 1;
+            var end = 2;
             List<SlimeDefinition> components = null;
-            if (args[1].StartsWith("["))
-            {
-                end = args.Select((x, i) => (x, i)).First(p => p.Item1.EndsWith("]")).Item2;
-                var parts = Regex.Replace(string.Join(" ", args.Skip(1).Take(end)), @"[, ][ ]*", " ").Replace("[", "").Replace("]", "").Split(' ');
-                components = parts.Select(p => p.Contains('_') ? '+' + p + '+' : p).Select(p => Core.pureSlimes[p]).ToList();
-            }
-            else
-            {
-                components = Core.GetPureSlimes(Core.GetComponentSlimeNames(args[1]));
-            }
+            var parts = string.Join(" ", args.Skip(1).Take(end)).Split('-');
+            components = parts.Select(p => Core.pureSlimes[p]).ToList();
             if (args.Length < end + strat.types.Count)
             {
                 Log.Error("you must provide parameters in the form of: " + string.Join(" ", strat.types.Select(t => t.type.Name)));
                 return false;
             }
             var parameters = Core.GetParameters(strat, args.Skip(end + 1));
-            Log.Debug($"Fusing in mode {strat.blame}... (on {string.Join(", ", components.Select(s => s.IdentifiableId.ToString()))}...) (with {string.Join(", ", parameters)}...)");
+            Log.Debug($"Fusing in mode {strat.blame}... (on {string.Join(", ", components.Select(Core.GetFullName))}...) (with {string.Join(", ", parameters)}...)");
             var slime = Core.InvokeStrategy(strat, components, parameters);
-            Log.Info($"Produced fusion {slime.IdentifiableId}!");
+            Log.Info($"Fusion resulted in {strat.DebugName(slime)}");
             return true;
         }
         public override List<string> GetAutoComplete(int argIndex, string argText)
@@ -58,8 +50,10 @@ namespace FusionCore
             Log.Debug(ConsoleWindow.cmdText);
             if (argIndex == 0)
                 return Core.fusionStrats.Select(s => s.blame).ToList();
-            if (argIndex == 1)
-                return Core.pureSlimes.Keys.ToList();
+            if (argIndex == 1) {
+                var chosen = argText.Substring(0, argText.LastIndexOf('-') + 1).ToUpper();
+                return Core.pureSlimes.Keys.Select(k => chosen + k).ToList();
+            }
             return base.GetAutoComplete(argIndex, argText);
         }
     }
