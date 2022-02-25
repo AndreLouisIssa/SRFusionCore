@@ -9,6 +9,8 @@ using System.Reflection.Emit;
 using System.IO;
 using SRML.SR.SaveSystem.Data;
 using Console = SRML.Console.Console;
+using System;
+using SRML.SR.SaveSystem.Format;
 
 namespace FusionCore
 {
@@ -60,14 +62,13 @@ namespace FusionCore
         [HarmonyPatch(typeof(SaveHandler), nameof(SaveHandler.LoadModdedSave))]
         class SR_SaveHandler_LoadModdedSave
         {
-            public static void Postfix(AutoSaveDirector director, string savename)
+            public static void Prefix(AutoSaveDirector director, string savename)
             {
-                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(), worldDataPath, savename + worldDataExt);
+                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(),
+                    worldDataPath, savename.Substring(0, savename.LastIndexOf('_')) + worldDataExt);
                 if (File.Exists(path))
                 {
-                    var file = File.OpenRead(path);
-                    Core.OnWorldDataLoad(Core.DecodeBlames(new BinaryReader(file).ReadString()));
-                    file.Close();
+                    Core.OnWorldDataLoad(Core.DecodeBlames(string.Join("", File.ReadAllBytes(path).Select(b => (char)b))));
                 }
             }
         }
@@ -78,11 +79,12 @@ namespace FusionCore
             public static void Postfix(AutoSaveDirector director, string nextfilename)
             {
                 if (!Core.worldData.DataList.Any()) return;
-                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(), worldDataPath, nextfilename + worldDataExt);
+                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(),
+                    worldDataPath, nextfilename.Substring(0, nextfilename.LastIndexOf('_')) + worldDataExt);
                 var blamestring = Core.EncodeBlames(Core.worldData);
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
-                var file = File.Create(path);
-                new BinaryWriter(file).Write(blamestring);
+                var file = new BinaryWriter(File.Create(path));
+                file.Write(blamestring.Select(c => (byte)c).ToArray());
                 file.Close();
             }
         }

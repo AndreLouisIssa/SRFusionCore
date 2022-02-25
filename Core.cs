@@ -37,7 +37,7 @@ namespace FusionCore
         public static string AdjustCategoryName(string original)
         {
             if (worldData.HasPiece(original))
-                return "_" + worldData.GetValue<CompoundDataPiece>(original).GetValue<string>("category");
+                return "_" + worldData.GetCompoundPiece(original).GetValue<string>("category");
             return original;
         }
 
@@ -65,16 +65,22 @@ namespace FusionCore
         public static bool ResolveMissingID(ref string value)
         {
             if (!worldData.HasPiece(value)) return false;
-            var data = worldData.GetValue<CompoundDataPiece>(value);
+            int i = 0;
+            Log.Info("CHECK " + (i++).ToString());
+            var data = worldData.GetCompoundPiece(value);
+            Log.Info("CHECK " + (i++).ToString());
             var blame = data.GetValue<string>("blame");
+            Log.Info("CHECK " + (i++).ToString());
             var strat = fusionStrats.FirstOrDefault(s => s.blame == blame);
             if (strat is null)
             {
                 Log.Error($"{nameof(FusionCore)}: No strategy '{blame}' exists to fix missing ID {value}!");
                 return false;
             }
-            var parameters = GetParameters(strat, data.GetValue<string[]>("parameters"));
+            Log.Info("CHECK " + (i++).ToString());
             var components = GetComponents(data.GetValue<string[]>("components"));
+            Log.Info("CHECK " + (i++).ToString());
+            var parameters = new List<Parameter>(); //GetParameters(strat, data.GetValue<string[]>("parameters"));
             value = strat.factory(components, parameters).IdentifiableId.ToString();
             return true;
         }
@@ -94,19 +100,13 @@ namespace FusionCore
 
             var sb = new StringBuilder();
 
-            void line(string s)
-            {
-                Log.Info(s);
-                sb.AppendLine(s);
-            }
-
             foreach (var data in blames.DataList.Select(e => (CompoundDataPiece)e))
             {
-                line(data.key);
-                line($"{data.GetValue("blame")}");
-                line($"{data.GetValue("category")}");
-                line($"{string.Join("\t", data.GetValue<string[]>("components"))}");
-                line($"{string.Join("\t", data.GetValue<string[]>("parameters"))}");
+                sb.AppendLine(data.key);
+                sb.AppendLine($"{data.GetValue("blame")}");
+                sb.AppendLine($"{data.GetValue("category")}");
+                sb.AppendLine($"{string.Join("\t", data.GetValue<string[]>("components"))}");
+                sb.AppendLine($"{string.Join("\t", data.GetValue<string[]>("parameters"))}");
             }
             return sb.ToString();
         }
@@ -116,7 +116,7 @@ namespace FusionCore
             var blames = new CompoundDataPiece("blames");
             CompoundDataPiece data = null;
             int i = 0;
-            foreach (var line in blamestring.Split('\n'))
+            foreach (var line in blamestring.Substring(0, blamestring.Length - 1).Split('\n').Select(s => s.Any() ? s.Substring(0, s.Length - 1) : s))
             {
                 switch (i++)
                 {
@@ -136,33 +136,6 @@ namespace FusionCore
             return blames;
         }
 
-        public static void LogCompoundDataPiece(CompoundDataPiece data, string indent = "  ", Action<string> log = null, string level = "")
-        {
-            if (log is null) log = (s) => Log.Info(s);
-            var key = data.key;
-            if (key != "") key += " = ";
-            log($"{level}{key}{{");
-            var _level = level + indent;
-            foreach (var p in data.DataList)
-            {
-                key = p.key;
-                if (key != "") key += " = ";
-                if (p is CompoundDataPiece c)
-                    LogCompoundDataPiece(c, indent, log, _level);
-                else if (p.data is string s)
-                    log($"{_level}{key}\"{p.data}\"");
-                else if (p.data is IEnumerable e)
-                {
-                    var l = new List<string> { };
-                    foreach (var v in e) l.Add(v.ToString());
-                    log($"{_level}{key}[{string.Join(", ", l)}]");
-                }
-                else
-                    log($"{_level}{key}{p.data}");
-            }
-            log(level + "}");
-        }
-
         public static SlimeDefinition InvokeStrategy(this Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
             parameters = parameters ?? new List<Parameter>();
@@ -175,11 +148,6 @@ namespace FusionCore
         {
             var defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
             return ids.Select(i => defns.GetSlimeByIdentifiableId((Identifiable.Id)Enum.Parse(typeof(Identifiable.Id),i))).ToList();
-        }
-
-        public static List<Parameter> GetParameters(this Strategy strat, string msg)
-        {
-            return GetParameters(strat, msg.Split(' '));
         }
 
         public static List<Parameter> GetParameters(this Strategy strat, IEnumerable<string> args)
