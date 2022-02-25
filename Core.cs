@@ -182,7 +182,13 @@ namespace FusionCore
 
         public static List<Parameter> GetParameters(this Strategy strat, IEnumerable<string> args)
         {
-            return args.Select((s, i) => Parameter.Parse(strat.types[i], s)).ToList();
+            var arglist = args.ToList();
+            var parameters = strat.required.Select((p,i) => Parameter.Parse(p.Item1,arglist[i]));
+            parameters = parameters.Concat(strat.optional.Select((p, i) => (p, i+strat.required.Count))
+                .Select(t => Parameter.Parse(t.Item1.Item1, t.Item2 < arglist.Count ? arglist[t.Item2] : t.Item1.Item1.represent(t.Item1.Item3))));
+            if (strat.variadic != null && arglist.Count > parameters.Count())
+                parameters = parameters.Concat(arglist.Skip(parameters.Count()).Select(a => Parameter.Parse(strat.variadic?.Item1, a)));
+            return parameters.ToList();
         }
 
         public static void Setup()
