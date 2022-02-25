@@ -15,6 +15,7 @@ namespace FusionCore
     public class Main : ModEntryPoint
     {
         public static readonly string worldDataPath = "FusionCoreWorldData";
+        public static readonly string worldDataExt = ".txt";
 
         public override void PreLoad()
         {
@@ -61,26 +62,27 @@ namespace FusionCore
         {
             public static void Postfix(AutoSaveDirector director, string savename)
             {
-                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(), worldDataPath, savename);
+                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(), worldDataPath, savename, worldDataExt);
                 if (File.Exists(path))
                 {
                     var file = File.OpenRead(path);
-                    Core.OnWorldDataLoad((CompoundDataPiece)DataPiece.Deserialize(new BinaryReader(file)));
+                    Core.OnWorldDataLoad(Core.DecodeBlames(new BinaryReader(file).ReadString()));
                     file.Close();
                 }
             }
         }
 
-        
         [HarmonyPatch(typeof(SaveHandler), nameof(SaveHandler.SaveModdedSave))]
         class SR_SaveHandler_SaveModdedSave
         {
             public static void Postfix(AutoSaveDirector director, string nextfilename)
             {
-                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(), worldDataPath, nextfilename);
+                if (!Core.worldData.DataList.Any()) return;
+                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(), worldDataPath, nextfilename, worldDataExt);
+                var blamestring = Core.EncodeBlames(Core.worldData);
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 var file = File.Create(path);
-                Core.worldData.Serialize(new BinaryWriter(file));
+                new BinaryWriter(file).Write(blamestring);
                 file.Close();
             }
         }

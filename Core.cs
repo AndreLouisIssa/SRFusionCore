@@ -21,7 +21,7 @@ namespace FusionCore
             Identifiable.Id.TARR_SLIME
         };
 
-        public static readonly CompoundDataPiece worldData = new CompoundDataPiece("");
+        public static readonly CompoundDataPiece worldData = new CompoundDataPiece("blames");
         public static void OnWorldDataLoad(CompoundDataPiece data)
         {
             string fixer(string id) => SaveHandler.data.enumTranslator.TranslateEnum(EnumTranslator.TranslationMode.FROMTRANSLATED, id);
@@ -64,12 +64,7 @@ namespace FusionCore
 
         public static bool ResolveMissingID(ref string value)
         {
-            if (!worldData.HasPiece(value))
-            {
-                // TODO: Once world data is fixed this becomes a silent pass
-                Log.Error($"{nameof(FusionCore)}: No strategy saved to fix missing ID {value}!");
-                return false;
-            }
+            if (!worldData.HasPiece(value)) return false;
             var data = worldData.GetValue<CompoundDataPiece>(value);
             var blame = data.GetValue<string>("blame");
             var strat = fusionStrats.FirstOrDefault(s => s.blame == blame);
@@ -78,7 +73,7 @@ namespace FusionCore
                 Log.Error($"{nameof(FusionCore)}: No strategy '{blame}' exists to fix missing ID {value}!");
                 return false;
             }
-            var parameters = GetParameters(strat, data.GetValue<string>("parameters"));
+            var parameters = GetParameters(strat, data.GetValue<string[]>("parameters"));
             var components = GetComponents(data.GetValue<string[]>("components"));
             value = strat.factory(components, parameters).IdentifiableId.ToString();
             return true;
@@ -90,8 +85,48 @@ namespace FusionCore
             data.SetValue("blame", strategy.blame);
             data.SetValue("category", strategy.category);
             data.SetValue("components", components.Select(s => s.IdentifiableId.ToString()).ToArray());
-            data.SetValue("parameters", string.Join(" ", parameters.Select(p => p.ToString())));
+            data.SetValue("parameters", parameters.Select(p => p.ToString()).ToArray());
             worldData.AddPiece(data);
+        }
+
+        public static string EncodeBlames(CompoundDataPiece blames)
+        {
+            var sb = new StringBuilder();
+            foreach (var id in blames.DataList)
+            {
+                sb.AppendLine(id.key);
+                var data = id.GetValue<CompoundDataPiece>();
+                sb.AppendLine($"{data.GetValue("blame")}");
+                sb.AppendLine($"{data.GetValue("category")}");
+                sb.AppendLine($"{string.Join("\t", data.GetValue<string[]>("components"))}");
+                sb.AppendLine($"{string.Join("\t", data.GetValue<string[]>("parameters"))}");
+            }
+            return sb.ToString();
+        }
+
+        public static CompoundDataPiece DecodeBlames(string blamestring)
+        {
+            var blames = new CompoundDataPiece("blames");
+            CompoundDataPiece data = null;
+            int i = 0;
+            foreach (var line in blamestring.Split('\n'))
+            {
+                switch (i++)
+                {
+                    case 0:
+                        blames.AddPiece(data = new CompoundDataPiece(line)); break;
+                    case 1:
+                        data.SetValue("blame", line); break;
+                    case 2:
+                        data.SetValue("category", line); break;
+                    case 3:
+                        data.SetValue("components", line.Split('\t').ToArray()); break;
+                    case 4:
+                        data.SetValue("parameters", line.Split('\t').ToArray()); break;
+                }
+                i %= 5;
+            }
+            return blames;
         }
 
         public static void LogCompoundDataPiece(CompoundDataPiece data, string indent = "  ", Action<string> log = null, string level = "")
