@@ -19,13 +19,13 @@ namespace FusionCore
         public void Help(Strategy strat, string preface = null, Action<string> log = null)
         {
             if (log == null) log = (s) => Log.Error(s);
-            var clamp = strat.variadic == null;
+            var clamp = !strat.variadic.Any();
             var any = strat.required.Any() || (clamp && strat.optional.Any());
             log($"{(preface != null ? preface + " as " : "")}the {Core.TitleCase(strat.blame)} mode takes {(!clamp ? "at least " : "") }{1 + strat.required.Count}" +
                 $"{(clamp ? $" to {1 + strat.required.Count + strat.optional.Count}" : "")} arg{(any ? "s" : "")}");
             Log.Info($"required: {$"<fusion ({fusionType.hint})>"} {string.Join(" ", strat.required.Select(t => $"<{t.Item2 ?? ""} ({t.Item1.hint})>"))}");
             if (strat.optional.Any()) Log.Info($"optional: {string.Join(" ", strat.optional.Select(t => $"<{t.Item2 ?? ""} ({t.Item1.hint}) = {t.Item3}>"))}");
-            if (strat.variadic != null) Log.Info($"variadic:  <{strat.variadic?.Item2 ?? ""}({strat.variadic?.Item1.hint})>");
+            if (strat.variadic.Any()) Log.Info($"variadic: {string.Join(" ", strat.variadic.TakeWhile((t, i) => i < 6).Select(t => $"<{t.Item2 ?? ""} ({t.Item1.hint})>"))}...");
         }
 
         public override bool Execute(string[] args)
@@ -64,7 +64,7 @@ namespace FusionCore
                 Help(strat, "too few arguments given");
                 return false;
             }
-            if (strat.variadic == null & args.Length > 2 + strat.required.Count + strat.optional.Count)
+            if (!strat.variadic.Any() && args.Length > 2 + strat.required.Count + strat.optional.Count)
             {
                 Help(strat, "too many arguments given");
                 return false;
@@ -88,10 +88,11 @@ namespace FusionCore
             if (strat == null) return base.GetAutoComplete(argIndex, argText);
             if (argIndex == 1) return fusionType.auto(argText);
             if (currentArgs.Skip(2).Any(s => s.Contains("\""))) return base.GetAutoComplete(argIndex, argText);
-            int i = 1 + strat.required.Count;
+            int i = 1 + strat.required.Count; int j = i + strat.optional.Count;
             if (argIndex <= i) return strat.required[argIndex - 1].Item1.auto(argText);
-            if (strat.variadic != null || argIndex <= i + strat.optional.Count) return strat.optional[argIndex - i - 1].Item1.auto(argText);
-            if (strat.variadic != null) return strat.variadic?.Item1.auto(argText);
+            if (strat.variadic.Any() || argIndex <= j) return strat.optional[argIndex - i - 1].Item1.auto(argText);
+            if (strat.variadic.Any()) return strat.variadic.SkipWhile((t, k) => k < argIndex - j)
+                    .TakeWhile((t, k) => k == 0).SelectMany(t => t.Item1.auto(argText)).ToList();
             return base.GetAutoComplete(argIndex, argText);
         }
     }

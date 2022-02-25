@@ -109,7 +109,7 @@ namespace FusionCore
             }
             var components = GetComponents(data.GetValue<string[]>("components"));
             var parameters = GetParameters(strat, data.GetValue<string[]>("parameters"));
-            value = strat.factory(components, parameters).GetFullName();
+            value = strat.factory(ref components, ref parameters).GetFullName();
             return true;
         }
 
@@ -169,7 +169,7 @@ namespace FusionCore
         {
             parameters = parameters ?? new List<Parameter>();
             components = components.SelectMany(c => PureSlimeFullNames(c.GetFullName()).Select(GetSlimeByFullName)).ToList();
-            var slime = strategy.factory(components, parameters);
+            var slime = strategy.factory(ref components, ref parameters);
             BlameStrategyForID(strategy, slime.IdentifiableId, components, parameters);
             return slime;
         }
@@ -186,8 +186,11 @@ namespace FusionCore
             var parameters = strat.required.Select((p,i) => Parameter.Parse(p.Item1,arglist[i]));
             parameters = parameters.Concat(strat.optional.Select((p, i) => (p, i+strat.required.Count))
                 .Select(t => Parameter.Parse(t.Item1.Item1, t.Item2 < arglist.Count ? arglist[t.Item2] : t.Item1.Item1.represent(t.Item1.Item3))));
-            if (strat.variadic != null && arglist.Count > parameters.Count())
-                parameters = parameters.Concat(arglist.Skip(parameters.Count()).Select(a => Parameter.Parse(strat.variadic?.Item1, a)));
+            if (strat.variadic.Any() && arglist.Count > parameters.Count())
+            {
+                var e = strat.variadic.GetEnumerator();
+                parameters = parameters.Concat(arglist.Skip(parameters.Count()).Select((a, i) => Parameter.Parse(strat.variadic.Skip(i).First().Item1, a)));
+            }
             return parameters.ToList();
         }
 

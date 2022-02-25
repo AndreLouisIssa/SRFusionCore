@@ -9,8 +9,8 @@ namespace FusionCore
         public class Type
         {
             public readonly System.Type type;
-            public readonly Func<string, List<string>> auto;
             public readonly string hint;
+            public readonly Func<string, List<string>> auto;
             public readonly Func<string, object> parse;
             public readonly Func<object, string> represent = (v) => v.ToString();
             public Type(System.Type type, string hint, Func<string, List<string>> auto, Func<string, object> parse, Func<object, string> represent = null)
