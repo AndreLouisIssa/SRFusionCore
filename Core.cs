@@ -1,5 +1,6 @@
 using SRML;
 using SRML.SR;
+using SRML.SR.SaveSystem;
 using SRML.SR.SaveSystem.Data;
 using System;
 using System.Collections;
@@ -21,12 +22,14 @@ namespace FusionCore
         };
 
         public static readonly CompoundDataPiece worldData = new CompoundDataPiece("");
-        public static void OnWorldDataSave(CompoundDataPiece data) { data.data = worldData.data; }
         public static void OnWorldDataLoad(CompoundDataPiece data)
         {
+            string fixer(string id) => SaveHandler.data.enumTranslator.TranslateEnum(EnumTranslator.TranslationMode.FROMTRANSLATED, id);
+
             foreach (var p in data.DataList)
             {
                 if (worldData.DataList.Contains(p)) worldData.DataList.Remove(p);
+                if (p.data is string s) p.data = fixer(s);
                 worldData.DataList.Add(p);
             }
         }
@@ -61,27 +64,24 @@ namespace FusionCore
 
         public static bool ResolveMissingID(ref string value)
         {
-            bool valid = AllComponentsExist(value);
-            if (valid)
+            if (!worldData.HasPiece(value))
             {
-                if (!worldData.HasPiece(value))
-                {
-                    Log.Error($"{nameof(FusionCore)}: No strategy saved to fix missing ID {value}!");
-                    return false;
-                }
-                var data = worldData.GetValue<CompoundDataPiece>(value);
-                var blame = data.GetValue<string>("blame");
-                var strat = fusionStrats.FirstOrDefault(s => s.blame == blame);
-                if (strat is null)
-                {
-                    Log.Error($"{nameof(FusionCore)}: No strategy '{blame}' exists to fix missing ID {value}!");
-                    return false;
-                }
-                var parameters = GetParameters(strat, data.GetValue<string>("parameters"));
-                var components = GetComponents(data.GetValue<Identifiable.Id[]>("components"));
-                value = strat.factory(components, parameters).IdentifiableId.ToString();
+                // TODO: Once world data is fixed this becomes a silent pass
+                Log.Error($"{nameof(FusionCore)}: No strategy saved to fix missing ID {value}!");
+                return false;
             }
-            return valid;
+            var data = worldData.GetValue<CompoundDataPiece>(value);
+            var blame = data.GetValue<string>("blame");
+            var strat = fusionStrats.FirstOrDefault(s => s.blame == blame);
+            if (strat is null)
+            {
+                Log.Error($"{nameof(FusionCore)}: No strategy '{blame}' exists to fix missing ID {value}!");
+                return false;
+            }
+            var parameters = GetParameters(strat, data.GetValue<string>("parameters"));
+            var components = GetComponents(data.GetValue<string[]>("components"));
+            value = strat.factory(components, parameters).IdentifiableId.ToString();
+            return true;
         }
 
         public static void BlameStrategyForID(this Strategy strategy, Identifiable.Id id, List<SlimeDefinition> components, List<Parameter> parameters)
@@ -89,7 +89,7 @@ namespace FusionCore
             var data = new CompoundDataPiece(id.ToString());
             data.SetValue("blame", strategy.blame);
             data.SetValue("category", strategy.category);
-            data.SetValue("components", components.Select(s => s.IdentifiableId).ToArray());
+            data.SetValue("components", components.Select(s => s.IdentifiableId.ToString()).ToArray());
             data.SetValue("parameters", string.Join(" ", parameters.Select(p => p.ToString())));
             worldData.AddPiece(data);
         }
@@ -129,10 +129,10 @@ namespace FusionCore
             return slime;
         }
 
-        public static List<SlimeDefinition> GetComponents(IEnumerable<Identifiable.Id> ids)
+        public static List<SlimeDefinition> GetComponents(IEnumerable<string> ids)
         {
             var defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
-            return ids.Select(i => defns.GetSlimeByIdentifiableId(i)).ToList();
+            return ids.Select(i => defns.GetSlimeByIdentifiableId((Identifiable.Id)Enum.Parse(typeof(Identifiable.Id),i))).ToList();
         }
 
         public static List<Parameter> GetParameters(this Strategy strat, string msg)

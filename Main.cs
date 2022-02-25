@@ -1,23 +1,26 @@
 ﻿using HarmonyLib;
 using SRML;
-using SRML.Console;
 using SRML.SR;
 using SRML.SR.SaveSystem;
+using static SRML.SR.SRCallbacks;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
+using System.IO;
+using SRML.SR.SaveSystem.Data;
+using Console = SRML.Console.Console;
 
 namespace FusionCore
 {
     public class Main : ModEntryPoint
     {
+        public static readonly string worldDataPath = "FusionCoreWorldData";
+
         public override void PreLoad()
         {
             HarmonyInstance.PatchAll();
-            SaveRegistry.RegisterWorldDataLoadDelegate(Core.OnWorldDataLoad);
-            SaveRegistry.RegisterWorldDataSaveDelegate(Core.OnWorldDataSave);
             EnumTranslator.RegisterFallbackHandler<Identifiable.Id>(Core.ResolveMissingID);
-            SRCallbacks.OnMainMenuLoaded += (_) => Core.worldData.DataList.Clear();
+            OnMainMenuLoaded += (_) => Core.worldData.DataList.Clear();
             Console.RegisterCommand(new Command());
         }
 
@@ -41,17 +44,45 @@ namespace FusionCore
             }
         }
 
-        [HarmonyPatch(typeof(IdentifiableRegistry), "CategorizeId")]
+        [HarmonyPatch(typeof(IdentifiableRegistry), nameof(IdentifiableRegistry.CategorizeId))]
         class SR_IdentifiableRegistry_CategorizeId
         {
             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
                 var code = instructions.ToList();
                 var ind = code.FindIndex((x) => x.opcode == OpCodes.Stloc_0);
-                code.Insert(ind++, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Core),nameof(Core.AdjustCategoryName))));
+                code.Insert(ind++, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Core), nameof(Core.AdjustCategoryName))));
                 return code;
             }
         }
 
+        [HarmonyPatch(typeof(SaveHandler), nameof(SaveHandler.LoadModdedSave))]
+        class SR_SaveHandler_LoadModdedSave
+        {
+            public static void Postfix(AutoSaveDirector director, string savename)
+            {
+                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(), worldDataPath, savename);
+                if (File.Exists(path))
+                {
+                    var file = File.OpenRead(path);
+                    Core.OnWorldDataLoad((CompoundDataPiece)DataPiece.Deserialize(new BinaryReader(file)));
+                    file.Close();
+                }
+            }
+        }
+
+        
+        [HarmonyPatch(typeof(SaveHandler), nameof(SaveHandler.SaveModdedSave))]
+        class SR_SaveHandler_SaveModdedSave
+        {
+            public static void Postfix(AutoSaveDirector director, string nextfilename)
+            {
+                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(), worldDataPath, nextfilename);
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                var file = File.Create(path);
+                Core.worldData.Serialize(new BinaryWriter(file));
+                file.Close();
+            }
+        }
     }
 }
