@@ -263,8 +263,8 @@ namespace FusionCore
 
         public static int UniqueSurnameHash(this Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
-            var hash = (parameters is null) ? 0 : parameters.Select(p => p.GetHashCode()).Aggregate((h1, h2) => 13 * h1 + h2);
-            return hash + components.Select(c => c.IdentifiableId.GetHashCode()).Aggregate((h1, h2) => 11 * h1 + h2) + 27 * strategy.GetHashCode();
+            var hash = (parameters is null) ? 0 : parameters.Select(p => p.GetHashCode()).Aggregate((h1, h2) => 27 * h1 + h2);
+            return 13 * hash + components.Select(c => c.IdentifiableId.GetHashCode()).Aggregate((h1, h2) => 11 * h1 + h2) + 71 * strategy.GetHashCode();
         }
 
         public static string UniqueFullName(this Strategy strategy, string suffix, List<SlimeDefinition> components, List<Parameter> parameters = null)
@@ -275,7 +275,7 @@ namespace FusionCore
         public static string EncodeHash(int value)
         {
             //https://stackoverflow.com/a/33729594
-            var chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
             var n = chars.Length;
             var result = new StringBuilder();
             value = Math.Abs(value);
