@@ -196,11 +196,16 @@ namespace FusionCore
 
         public static void Setup()
         {
-            SlimeDefinitions defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
-            foreach (var pure in defns.Slimes.Where(slime => !slime.IsLargo && !exemptSlimes.Contains(slime.IdentifiableId)))
+            foreach (var pure in AllSlimes().Where(slime => !slime.IsLargo))
             {
                 pureSlimes.Add(PureName(pure.GetFullName()), pure);
             }
+        }
+
+        public static List<SlimeDefinition> AllSlimes()
+        {
+            SlimeDefinitions defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
+            return defns.Slimes.Where(slime => !exemptSlimes.Contains(slime.IdentifiableId) && !Config.exclude.Split(' ').Contains(PureName(slime.GetFullName()))).ToList();
         }
 
         public static string PureName(string name)
