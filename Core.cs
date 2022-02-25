@@ -80,7 +80,7 @@ namespace FusionCore
             Log.Info("CHECK " + (i++).ToString());
             var components = GetComponents(data.GetValue<string[]>("components"));
             Log.Info("CHECK " + (i++).ToString());
-            var parameters = new List<Parameter>(); //GetParameters(strat, data.GetValue<string[]>("parameters"));
+            var parameters = GetParameters(strat, data.GetValue<string[]>("parameters"));
             value = strat.factory(components, parameters).IdentifiableId.ToString();
             return true;
         }
@@ -98,17 +98,17 @@ namespace FusionCore
         public static string EncodeBlames(CompoundDataPiece blames)
         {
 
-            var sb = new StringBuilder();
+            var s = new List<string>();
 
             foreach (var data in blames.DataList.Select(e => (CompoundDataPiece)e))
             {
-                sb.AppendLine(data.key);
-                sb.AppendLine($"{data.GetValue("blame")}");
-                sb.AppendLine($"{data.GetValue("category")}");
-                sb.AppendLine($"{string.Join("\t", data.GetValue<string[]>("components"))}");
-                sb.AppendLine($"{string.Join("\t", data.GetValue<string[]>("parameters"))}");
+                s.Add(data.key);
+                s.Add($"{data.GetValue("blame")}");
+                s.Add($"{data.GetValue("category")}");
+                s.Add($"{string.Join("\t", data.GetValue<string[]>("components"))}");
+                s.Add($"{string.Join("\t", data.GetValue<string[]>("parameters"))}");
             }
-            return sb.ToString();
+            return string.Join("\n",s);
         }
 
         public static CompoundDataPiece DecodeBlames(string blamestring)
@@ -116,8 +116,9 @@ namespace FusionCore
             var blames = new CompoundDataPiece("blames");
             CompoundDataPiece data = null;
             int i = 0;
-            foreach (var line in blamestring.Substring(0, blamestring.Length - 1).Split('\n').Select(s => s.Any() ? s.Substring(0, s.Length - 1) : s))
+            foreach (var line in blamestring.Split('\n').Select(s => s.Any() ? s.Substring(0, s.Length - 1) : s))
             {
+                var split = line == "" ? new string[]{ } : line.Split('\t');
                 switch (i++)
                 {
                     case 0:
@@ -127,9 +128,9 @@ namespace FusionCore
                     case 2:
                         data.SetValue("category", line); break;
                     case 3:
-                        data.SetValue("components", line.Split('\t').ToArray()); break;
+                        data.SetValue("components", split); break;
                     case 4:
-                        data.SetValue("parameters", line.Split('\t').ToArray()); break;
+                        data.SetValue("parameters", split); break;
                 }
                 i %= 5;
             }
