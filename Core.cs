@@ -91,15 +91,22 @@ namespace FusionCore
 
         public static string EncodeBlames(CompoundDataPiece blames)
         {
+
             var sb = new StringBuilder();
-            foreach (var id in blames.DataList)
+
+            void line(string s)
             {
-                sb.AppendLine(id.key);
-                var data = id.GetValue<CompoundDataPiece>();
-                sb.AppendLine($"{data.GetValue("blame")}");
-                sb.AppendLine($"{data.GetValue("category")}");
-                sb.AppendLine($"{string.Join("\t", data.GetValue<string[]>("components"))}");
-                sb.AppendLine($"{string.Join("\t", data.GetValue<string[]>("parameters"))}");
+                Log.Info(s);
+                sb.AppendLine(s);
+            }
+
+            foreach (var data in blames.DataList.Select(e => (CompoundDataPiece)e))
+            {
+                line(data.key);
+                line($"{data.GetValue("blame")}");
+                line($"{data.GetValue("category")}");
+                line($"{string.Join("\t", data.GetValue<string[]>("components"))}");
+                line($"{string.Join("\t", data.GetValue<string[]>("parameters"))}");
             }
             return sb.ToString();
         }

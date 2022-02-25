@@ -62,7 +62,7 @@ namespace FusionCore
         {
             public static void Postfix(AutoSaveDirector director, string savename)
             {
-                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(), worldDataPath, savename, worldDataExt);
+                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(), worldDataPath, savename + worldDataExt);
                 if (File.Exists(path))
                 {
                     var file = File.OpenRead(path);
@@ -78,7 +78,7 @@ namespace FusionCore
             public static void Postfix(AutoSaveDirector director, string nextfilename)
             {
                 if (!Core.worldData.DataList.Any()) return;
-                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(), worldDataPath, nextfilename, worldDataExt);
+                var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(), worldDataPath, nextfilename + worldDataExt);
                 var blamestring = Core.EncodeBlames(Core.worldData);
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 var file = File.Create(path);
