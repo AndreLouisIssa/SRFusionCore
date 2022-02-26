@@ -133,7 +133,7 @@ namespace FusionCore
             var blames = new CompoundDataPiece("blames");
             CompoundDataPiece data = null;
             int i = 0;
-            foreach (var line in blamestring.Split('\n').Select(s => s.Any() ? s.Substring(0, s.Length - 1) : s))
+            foreach (var line in blamestring.Split('\n'))
             {
                 var split = line == "" ? new string[] { } : line.Split('\t');
                 switch (i++)
