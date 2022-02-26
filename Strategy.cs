@@ -19,23 +19,25 @@ namespace FusionCore
 
         public override int GetHashCode() { return blame.GetHashCode(); }
         public string blame;
-        public string category;
-        public List<(Parameter.Type type, string label)> required;
-        public List<(Parameter.Type type, string label, object init)> optional;
-        public IEnumerable<(Parameter.Type type, string label)> variadic;
         public Factory factory;
+        public string category;
+        public Parameter.Type fusion = Parameter.Type.PureSlimes;
+        public List<(Parameter.Type type, string label)> required = new List<(Parameter.Type type, string label)>();
+        public List<(Parameter.Type type, string label, object init)> optional = new List<(Parameter.Type type, string label, object init)>();
+        public IEnumerable<(Parameter.Type type, string label)> variadic = EmptyVariadic();
 
         public Strategy(string blame, Factory factory, string category = "SLIME",
-            List<(Parameter.Type type, string label)> required = null,
+            Parameter.Type fusion = null, List<(Parameter.Type type, string label)> required = null,
             List<(Parameter.Type type, string label, object init)> optional = null,
             IEnumerable<(Parameter.Type type, string label)> variadic = null)
         {
             this.blame = blame.ToUpper();
-            this.category = category.ToUpper();
-            this.required = required ?? new List<(Parameter.Type type, string label)>();
-            this.optional = optional ?? new List<(Parameter.Type type, string label, object init)>();
-            this.variadic = variadic ?? EmptyVariadic();
             this.factory = factory;
+            this.category = category.ToUpper();
+            this.fusion = fusion ?? this.fusion;
+            this.required = required ?? this.required;
+            this.optional = optional ?? this.optional;
+            this.variadic = variadic ?? this.variadic;
         }
 
         public SlimeDefinition Invoke(List<SlimeDefinition> components, List<Parameter> parameters = null)
@@ -89,7 +91,7 @@ namespace FusionCore
 
         public int UniqueSurnameHash(List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
-            var hash = (parameters is null) ? 0 : parameters.Select(p => p.GetHashCode()).Aggregate((h1, h2) => 27 * h1 + h2);
+            var hash = (parameters is null || !parameters.Any()) ? 0 : parameters.Select(p => p.GetHashCode()).Aggregate((h1, h2) => 27 * h1 + h2);
             return 13 * hash + components.Select(c => c.IdentifiableId.GetHashCode()).Aggregate((h1, h2) => 11 * h1 + h2) + 71 * GetHashCode();
         }
 

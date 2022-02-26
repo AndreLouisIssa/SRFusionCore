@@ -11,8 +11,6 @@ namespace FusionCore
         public override string ID => "fuse";
         public override string Description => "Create new slime definition using mod provided modes";
 
-        public readonly Parameter.Type fusionType = Parameter.Type.PureSlimes;
-
         public void Help(Strategy strat, string preface = null, Action<string> log = null)
         {
             if (log == null) log = (s) => Log.Error(s);
@@ -20,7 +18,7 @@ namespace FusionCore
             var any = strat.required.Any() || (clamp && strat.optional.Any());
             log($"{(preface != null ? preface + " as " : "")}the {Core.TitleCase(strat.blame)} mode takes {(!clamp ? "at least " : "") }{1 + strat.required.Count}" +
                 $"{(clamp ? $" to {1 + strat.required.Count + strat.optional.Count}" : "")} arg{(any ? "s" : "")}");
-            Log.Info($"required: {$"<fusion ({fusionType.hint})>"} {string.Join(" ", strat.required.Select(t => $"<{t.label ?? ""} ({t.type.hint})>"))}");
+            Log.Info($"required: {$"<fusion ({strat.fusion.hint})>"} {string.Join(" ", strat.required.Select(t => $"<{t.label ?? ""} ({t.type.hint})>"))}");
             if (strat.optional.Any()) Log.Info($"optional: {string.Join(" ", strat.optional.Select(t => $"<{t.label ?? ""} ({t.type.hint}) = {t.init}>"))}");
             if (strat.variadic.Any()) Log.Info($"variadic: {string.Join(" ", strat.variadic.TakeWhile((t, i) => i < 6).Select(t => $"<{t.label ?? ""} ({t.type.hint})>"))}...");
         }
@@ -40,7 +38,7 @@ namespace FusionCore
                 { Help(strat, null, (s) => Log.Info(s)); return true; }
             if (args.Length < 2)
                 { Help(strat, "too few arguments given"); return false; }
-            List<SlimeDefinition> components = (List<SlimeDefinition>)fusionType.parse(args[1].ToUpper());
+            List<SlimeDefinition> components = (List<SlimeDefinition>)strat.fusion.parse(args[1].ToUpper());
             if (args.Length < 2 + strat.required.Count)
                 { Help(strat, "too many arguments given"); return false; }
             if (!strat.variadic.Any() && args.Length > 2 + strat.required.Count + strat.optional.Count)
@@ -59,7 +57,7 @@ namespace FusionCore
             if (blame == "HELP" && argIndex == 1) return Core.fusionStrats.Select(s => Core.TitleCase(s.blame)).ToList();
             var strat = Core.fusionStrats.FirstOrDefault(s => s.blame == blame);
             if (strat == null) return base.GetAutoComplete(argIndex, argText);
-            if (argIndex == 1) return fusionType.auto(argText);
+            if (argIndex == 1) return strat.fusion.auto(argText);
             if (currentArgs.Skip(2).Any(s => s.Contains("\""))) return base.GetAutoComplete(argIndex, argText);
             int i = 1 + strat.required.Count; int j = i + strat.optional.Count;
             if (argIndex <= i) return strat.required[argIndex - 1].type.auto(argText);

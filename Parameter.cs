@@ -28,7 +28,16 @@ namespace FusionCore
                 s => Core.GetSlimeByFullName(s), s => ((SlimeDefinition)s).GetFullName());
             public static Type PureSlime = new Type(typeof(SlimeDefinition), "PINK etc.",
                 s => Core.pureSlimes.Keys.ToList(), s => Core.pureSlimes[s], s => Core.PureName(((SlimeDefinition)s).GetFullName()));
-            public static Type PureSlimes = new Type(typeof(List<SlimeDefinition>), "PINK-GOLD etc.",
+            public static Type PurePair = new Type(typeof(List<SlimeDefinition>), "PINK-GOLD etc.",
+            s => {
+                var chosen = s.Substring(0, s.IndexOf('-') + 1).ToUpper();
+                return Core.pureSlimes.Keys.Select(k => chosen + k).ToList();
+            }, s => {
+                return Core.PureSlimeFullNames(s).Select(Core.GetSlimeByFullName).ToList();
+            },  l => {
+                return string.Join("-",((List<SlimeDefinition>)l).Select(Core.GetFullName).Select(Core.PureName));
+            });
+            public static Type PureSlimes = new Type(typeof(List<SlimeDefinition>), "PINK-GOLD-BOOM etc.",
             s => {
                 var chosen = s.Substring(0, s.LastIndexOf('-') + 1).ToUpper();
                 return Core.pureSlimes.Keys.Select(k => chosen + k).ToList();
