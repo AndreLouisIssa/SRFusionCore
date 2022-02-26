@@ -3,7 +3,6 @@ using SRML.SR;
 using SRML.SR.SaveSystem;
 using SRML.SR.SaveSystem.Data;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -107,20 +106,10 @@ namespace FusionCore
                 Log.Error($"{nameof(FusionCore)}: No strategy '{blame}' exists to fix missing ID {value}!");
                 return false;
             }
-            var components = GetComponents(data.GetValue<string[]>("components"));
-            var parameters = GetParameters(strat, data.GetValue<string[]>("parameters"));
+            var components = strat.ParseComponents(data.GetValue<string[]>("components"));
+            var parameters = strat.ParseParameters(data.GetValue<string[]>("parameters"));
             value = strat.factory(ref components, ref parameters).GetFullName();
             return true;
-        }
-
-        public static void BlameStrategyForID(this Strategy strategy, Identifiable.Id id, List<SlimeDefinition> components, List<Parameter> parameters)
-        {
-            var data = new CompoundDataPiece(id.ToString());
-            data.SetValue("blame", strategy.blame);
-            data.SetValue("category", strategy.category);
-            data.SetValue("components", components.Select(GetFullName).ToArray());
-            data.SetValue("parameters", parameters.Select(p => p.ToString()).ToArray());
-            worldData.AddPiece(data);
         }
 
         public static string EncodeBlames(CompoundDataPiece blames)
@@ -146,7 +135,7 @@ namespace FusionCore
             int i = 0;
             foreach (var line in blamestring.Split('\n').Select(s => s.Any() ? s.Substring(0, s.Length - 1) : s))
             {
-                var split = line == "" ? new string[]{ } : line.Split('\t');
+                var split = line == "" ? new string[] { } : line.Split('\t');
                 switch (i++)
                 {
                     case 0:
@@ -165,33 +154,18 @@ namespace FusionCore
             return blames;
         }
 
-        public static SlimeDefinition InvokeStrategy(this Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
+        public static string EncodeHash(int value)
         {
-            parameters = parameters ?? new List<Parameter>();
-            components = components.SelectMany(c => PureSlimeFullNames(c.GetFullName()).Select(GetSlimeByFullName)).ToList();
-            var slime = strategy.factory(ref components, ref parameters);
-            BlameStrategyForID(strategy, slime.IdentifiableId, components, parameters);
-            return slime;
-        }
+            //https://stackoverflow.com/a/33729594
+            var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            var n = chars.Length;
+            var result = new StringBuilder();
+            value = Math.Abs(value);
 
-        public static List<SlimeDefinition> GetComponents(IEnumerable<string> ids)
-        {
-            var defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
-            return ids.Select(i => defns.GetSlimeByIdentifiableId((Identifiable.Id)Enum.Parse(typeof(Identifiable.Id),i))).ToList();
-        }
+            while (value != 0)
+                { result.Append(chars[value % n]); value /= n; }
 
-        public static List<Parameter> GetParameters(this Strategy strat, IEnumerable<string> args)
-        {
-            var arglist = args.ToList();
-            var parameters = strat.required.Select((p,i) => Parameter.Parse(p.Item1,arglist[i]));
-            parameters = parameters.Concat(strat.optional.Select((p, i) => (p, i+strat.required.Count))
-                .Select(t => Parameter.Parse(t.Item1.Item1, t.Item2 < arglist.Count ? arglist[t.Item2] : t.Item1.Item1.represent(t.Item1.Item3))));
-            if (strat.variadic.Any() && arglist.Count > parameters.Count())
-            {
-                var e = strat.variadic.GetEnumerator();
-                parameters = parameters.Concat(arglist.Skip(parameters.Count()).Select((a, i) => Parameter.Parse(strat.variadic.Skip(i).First().Item1, a)));
-            }
-            return parameters.ToList();
+            return result.ToString();
         }
 
         public static void Setup()
@@ -270,39 +244,6 @@ namespace FusionCore
             return pureSlimes.Keys.Contains(PureName(name));
         }
 
-        public static string UniqueFirstName(List<SlimeDefinition> components)
-        {
-            return string.Join("_", components.SelectMany(c => DecomposePureSlimeNames(c.GetFullName())).Select(PureName));
-        }
-
-        public static int UniqueSurnameHash(this Strategy strategy, List<SlimeDefinition> components, List<Parameter> parameters = null)
-        {
-            var hash = (parameters is null) ? 0 : parameters.Select(p => p.GetHashCode()).Aggregate((h1, h2) => 27 * h1 + h2);
-            return 13 * hash + components.Select(c => c.IdentifiableId.GetHashCode()).Aggregate((h1, h2) => 11 * h1 + h2) + 71 * strategy.GetHashCode();
-        }
-
-        public static string UniqueFullName(this Strategy strategy, string suffix, List<SlimeDefinition> components, List<Parameter> parameters = null)
-        {
-            return $"{UniqueFirstName(components)}_{suffix}_{EncodeHash(UniqueSurnameHash(strategy, components, parameters))}";
-        }
-
-        public static string EncodeHash(int value)
-        {
-            //https://stackoverflow.com/a/33729594
-            var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-            var n = chars.Length;
-            var result = new StringBuilder();
-            value = Math.Abs(value);
-
-            while (value != 0)
-            {
-                result.Append(chars[value % n]);
-                value = value / n;
-            }
-
-            return result.ToString();
-        }
-
         public static string TitleCase(string s)
         {
             if (s == "") return s;
@@ -315,14 +256,6 @@ namespace FusionCore
                 return string.Join("-", s.Split('-').Select(TitleCase));
             }
             return s.First().ToString().ToUpper() + s.Substring(1).ToLower();
-        }
-
-        public static string DebugName(this Strategy strat, SlimeDefinition slime)
-        {
-            var display = slime.GetDisplayName();
-            if (display != null) display = "\"" + display + "\"";
-            else display = "<MISSING DISPLAY NAME>";
-            return $"{TitleCase(strat.category)}: {display} ({slime.IdentifiableId})";
         }
 
         public static string DisplayName(string suffix, List<SlimeDefinition> components)
