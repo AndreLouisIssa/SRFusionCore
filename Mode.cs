@@ -6,51 +6,47 @@ using static FusionCore.Core;
 
 namespace FusionCore
 {
-    public class Strategy
+    public abstract class Mode
     {
         public static int globalInvokeCounter = 0;
         public int localInvokeCounter = 0;
-        public static IEnumerable<(Parameter.Type type, string label)> EmptyVariadic()
+
+        public static IEnumerable<(Parameter.Form type, string label)> EmptyVariadic()
             { yield break; }
-        public static IEnumerable<(Parameter.Type type, string label)> RepeatVariadic(Parameter.Type type, string label)
+        public static IEnumerable<(Parameter.Form type, string label)> RepeatVariadic(Parameter.Form type, string label)
             { while (true) yield return (type, label); }
 
-        public delegate SlimeDefinition Factory(ref List<SlimeDefinition> components, ref List<Parameter> parameters);
+        protected abstract SlimeDefinition Produce(ref List<SlimeDefinition> components, ref List<Parameter> parameters);
+        public virtual bool FixAppearance(SlimeDefinition slime, ref SlimeAppearance appearance) => false;
 
-        public override int GetHashCode() { return blame.GetHashCode(); }
-        public string blame;
-        public Factory factory;
-        public string category;
-        public Parameter.Type fusion = Parameter.Type.PureSlimes;
-        public List<(Parameter.Type type, string label)> required = new List<(Parameter.Type type, string label)>();
-        public List<(Parameter.Type type, string label, object init)> optional = new List<(Parameter.Type type, string label, object init)>();
-        public IEnumerable<(Parameter.Type type, string label)> variadic = EmptyVariadic();
+        public override int GetHashCode() { return Blame.GetHashCode(); }
+        public abstract string Blame { get; }
+        public abstract string Category { get; }
+        public virtual Parameter.Form Fusion => Parameter.Form.PureSlimes;
+        public virtual List<(Parameter.Form type, string label)> Required => new List<(Parameter.Form, string)>();
+        public virtual List<(Parameter.Form type, string label, object init)> Optional => new List<(Parameter.Form, string, object)>();
+        public virtual IEnumerable<(Parameter.Form type, string label)> Variadic => EmptyVariadic();
 
-        public Strategy(string blame, Factory factory, string category = "SLIME",
-            Parameter.Type fusion = null, List<(Parameter.Type type, string label)> required = null,
-            List<(Parameter.Type type, string label, object init)> optional = null,
-            IEnumerable<(Parameter.Type type, string label)> variadic = null)
-        {
-            this.blame = blame.ToUpper();
-            this.factory = factory;
-            this.category = category.ToUpper();
-            this.fusion = fusion ?? this.fusion;
-            this.required = required ?? this.required;
-            this.optional = optional ?? this.optional;
-            this.variadic = variadic ?? this.variadic;
-        }
+        public void Register() { fusionModes[Blame] = this; }
 
-        public SlimeDefinition Invoke(List<SlimeDefinition> components, List<Parameter> parameters = null)
+        public Mode() { }
+
+        public SlimeDefinition Produce(List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
             parameters = parameters ?? new List<Parameter>();
             components = components.SelectMany(c => PureSlimeFullNames(c.GetFullName()).Select(GetSlimeByFullName)).ToList();
             var gc = ++globalInvokeCounter; var lc = ++localInvokeCounter;
-            Log.Info($"{nameof(FusionCore)}: [#{gc}|#{lc}] Fusing in mode {blame}..." +
+            Log.Info($"{nameof(FusionCore)}: [#{gc}|#{lc}] Fusing in mode {Blame}..." +
                 $" (on {string.Join(", ", components.Select(Core.GetFullName))}) (with {string.Join(", ", parameters)}...)");
-            var slime = factory(ref components, ref parameters);
+            var slime = Produce(ref components, ref parameters);
             RememberID(slime.IdentifiableId, components, parameters);
             Log.Info($"{nameof(FusionCore)}: [#{gc}|#{lc}] Fusion resulted in {DebugName(slime)}");
             return slime;
+        }
+
+        public List<SlimeDefinition> ParseComponents(string fusion)
+        {
+            return (List<SlimeDefinition>)Fusion.parse(fusion);
         }
 
         public List<SlimeDefinition> ParseComponents(IEnumerable<string> ids)
@@ -62,14 +58,14 @@ namespace FusionCore
         public List<Parameter> ParseParameters(IEnumerable<string> args)
         {
             var arglist = args.ToList();
-            var parameters = required.Select((p, i) => Parameter.Parse(p.type, arglist[i]));
-            parameters = parameters.Concat(optional.Select((p, i) => (p, i + required.Count))
+            var parameters = Required.Select((p, i) => Parameter.Parse(p.type, arglist[i]));
+            parameters = parameters.Concat(Optional.Select((p, i) => (p, i + Required.Count))
                 .Select(t => Parameter.Parse(t.p.type, t.Item2 < arglist.Count ? arglist[t.Item2] : t.p.type.represent(t.p.init))));
-            if (variadic.Any() && arglist.Count > parameters.Count())
+            if (Variadic.Any() && arglist.Count > parameters.Count())
             {
-                var e = variadic.GetEnumerator();
+                var e = Variadic.GetEnumerator();
                 parameters = parameters.Concat(arglist.Skip(parameters.Count())
-                    .Select((a, i) => Parameter.Parse(variadic.Skip(i).First().type, a)));
+                    .Select((a, i) => Parameter.Parse(Variadic.Skip(i).First().type, a)));
             }
             return parameters.ToList();
         }
@@ -77,11 +73,11 @@ namespace FusionCore
         public void RememberID(Identifiable.Id id, List<SlimeDefinition> components, List<Parameter> parameters)
         {
             var data = new CompoundDataPiece(id.ToString());
-            data.SetValue("blame", blame);
-            data.SetValue("category", category);
+            data.SetValue("mode", Blame);
+            data.SetValue("category", Category);
             data.SetValue("components", components.Select(Core.GetFullName).ToArray());
             data.SetValue("parameters", parameters.Select(p => p.ToString()).ToArray());
-            worldData.AddPiece(data);
+            blames.AddPiece(data);
         }
 
         public string UniqueFirstName(List<SlimeDefinition> components)
@@ -105,7 +101,7 @@ namespace FusionCore
             var display = slime.GetDisplayName();
             if (display != null) display = "\"" + display + "\"";
             else display = "<MISSING DISPLAY NAME>";
-            return $"{TitleCase(category)}: {display} ({slime.IdentifiableId})";
+            return $"{TitleCase(Category)}: {display} ({slime.IdentifiableId})";
         }
     }
 }

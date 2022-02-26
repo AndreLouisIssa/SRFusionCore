@@ -12,7 +12,7 @@ namespace FusionCore
 {
     public static class Core
     {
-        public static readonly List<Strategy> fusionStrats = new List<Strategy>();
+        public static readonly Dictionary<string, Mode> fusionModes = new Dictionary<string, Mode>();
         public static readonly Dictionary<string, SlimeDefinition> pureSlimes = new Dictionary<string, SlimeDefinition>();
         public static readonly List<Identifiable.Id> exemptSlimes = new List<Identifiable.Id>
         {
@@ -20,23 +20,23 @@ namespace FusionCore
             Identifiable.Id.TARR_SLIME
         };
 
-        public static readonly CompoundDataPiece worldData = new CompoundDataPiece("blames");
+        public static readonly CompoundDataPiece blames = new CompoundDataPiece("blames");
         public static void OnWorldDataLoad(CompoundDataPiece data)
         {
             string fixer(string id) => SaveHandler.data.enumTranslator.TranslateEnum(EnumTranslator.TranslationMode.FROMTRANSLATED, id);
 
             foreach (var p in data.DataList)
             {
-                if (worldData.DataList.Contains(p)) worldData.DataList.Remove(p);
+                if (blames.DataList.Contains(p)) blames.DataList.Remove(p);
                 if (p.data is string s) p.data = fixer(s);
-                worldData.DataList.Add(p);
+                blames.DataList.Add(p);
             }
         }
 
         public static string AdjustCategoryName(string original)
         {
-            if (worldData.HasPiece(original))
-                return "_" + worldData.GetCompoundPiece(original).GetValue<string>("category");
+            if (blames.HasPiece(original))
+                return "_" + blames.GetCompoundPiece(original).GetValue<string>("category");
             return original;
         }
 
@@ -92,23 +92,16 @@ namespace FusionCore
 
         public static bool ResolveMissingID(ref string value)
         {
-            Log.Info($"{nameof(FusionCore)}: Attempting to resolve missing ID {value}");
-            if (!worldData.HasPiece(value))
-            {
-                Log.Warning($"{nameof(FusionCore)}: Does not recognise missing ID {value}");
-                return false;
-            }
-            var data = worldData.GetCompoundPiece(value);
-            var blame = data.GetValue<string>("blame");
-            var strat = fusionStrats.FirstOrDefault(s => s.blame == blame);
-            if (strat is null)
+            var data = blames.GetCompoundPiece(value);
+            var blame = data.GetValue<string>("mode");
+            if (!fusionModes.TryGetValue(blame, out var strat))
             {
                 Log.Error($"{nameof(FusionCore)}: No strategy '{blame}' exists to fix missing ID {value}!");
                 return false;
             }
             var components = strat.ParseComponents(data.GetValue<string[]>("components"));
             var parameters = strat.ParseParameters(data.GetValue<string[]>("parameters"));
-            value = strat.factory(ref components, ref parameters).GetFullName();
+            value = strat.Produce(components, parameters).GetFullName();
             return true;
         }
 
@@ -120,7 +113,7 @@ namespace FusionCore
             foreach (var data in blames.DataList.Select(e => (CompoundDataPiece)e))
             {
                 s.Add(data.key);
-                s.Add($"{data.GetValue("blame")}");
+                s.Add($"{data.GetValue("mode")}");
                 s.Add($"{data.GetValue("category")}");
                 s.Add($"{string.Join("\t", data.GetValue<string[]>("components"))}");
                 s.Add($"{string.Join("\t", data.GetValue<string[]>("parameters"))}");
@@ -141,7 +134,7 @@ namespace FusionCore
                     case 0:
                         blames.AddPiece(data = new CompoundDataPiece(line)); break;
                     case 1:
-                        data.SetValue("blame", line); break;
+                        data.SetValue("mode", line); break;
                     case 2:
                         data.SetValue("category", line); break;
                     case 3:
@@ -222,9 +215,9 @@ namespace FusionCore
 
         public static List<string> PureSlimeFullNames(string name)
         {
-            if (worldData.HasPiece(name))
+            if (blames.HasPiece(name))
             {
-                return worldData.GetCompoundPiece(name).GetValue<string[]>("components").ToList();
+                return blames.GetCompoundPiece(name).GetValue<string[]>("components").ToList();
             }
             return DecomposePureSlimeFullNames(name);
         }

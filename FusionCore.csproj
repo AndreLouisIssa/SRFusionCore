@@ -294,9 +294,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Config.cs" />
-    <Compile Include="Command.cs" />
+    <Compile Include="Fuse.cs" />
     <Compile Include="Core.cs" />
-    <Compile Include="Strategy.cs" />
+    <Compile Include="Mode.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="Parameter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

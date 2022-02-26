@@ -7,10 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
 using System.IO;
-using SRML.SR.SaveSystem.Data;
 using Console = SRML.Console.Console;
-using System;
-using SRML.SR.SaveSystem.Format;
+using static FusionCore.Core;
 
 namespace FusionCore
 {
@@ -22,9 +20,9 @@ namespace FusionCore
         public override void PreLoad()
         {
             HarmonyInstance.PatchAll();
-            EnumTranslator.RegisterFallbackHandler<Identifiable.Id>(Core.ResolveMissingID);
-            OnMainMenuLoaded += (_) => Core.worldData.DataList.Clear();
-            Console.RegisterCommand(new Command());
+            EnumTranslator.RegisterFallbackHandler<Identifiable.Id>(ResolveMissingID);
+            OnMainMenuLoaded += (_) => blames.DataList.Clear();
+            Console.RegisterCommand(Fuse.instance);
         }
 
         [HarmonyPatch(typeof(SRModLoader), nameof(SRModLoader.LoadMods))]
@@ -32,7 +30,7 @@ namespace FusionCore
         {
             public static void Postfix()
             {
-                Core.Setup();
+                Setup();
             }
         }
 
@@ -48,19 +46,19 @@ namespace FusionCore
         }
 
         [HarmonyPatch(typeof(IdentifiableRegistry), nameof(IdentifiableRegistry.CategorizeId))]
-        class SR_IdentifiableRegistry_CategorizeId
+        public class SR_IdentifiableRegistry_CategorizeId
         {
             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
                 var code = instructions.ToList();
                 var ind = code.FindIndex((x) => x.opcode == OpCodes.Stloc_0);
-                code.Insert(ind++, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Core), nameof(Core.AdjustCategoryName))));
+                code.Insert(ind++, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Core), nameof(AdjustCategoryName))));
                 return code;
             }
         }
 
         [HarmonyPatch(typeof(SaveHandler), nameof(SaveHandler.LoadModdedSave))]
-        class SR_SaveHandler_LoadModdedSave
+        public class SR_SaveHandler_LoadModdedSave
         {
             public static void Prefix(AutoSaveDirector director, string savename)
             {
@@ -68,24 +66,40 @@ namespace FusionCore
                     worldDataPath, savename.Substring(0, savename.LastIndexOf('_')) + worldDataExt);
                 if (File.Exists(path))
                 {
-                    Core.OnWorldDataLoad(Core.DecodeBlames(string.Join("", File.ReadAllBytes(path).Select(b => (char)b))));
+                    OnWorldDataLoad(DecodeBlames(string.Join("", File.ReadAllBytes(path).Select(b => (char)b))));
                 }
             }
         }
 
         [HarmonyPatch(typeof(SaveHandler), nameof(SaveHandler.SaveModdedSave))]
-        class SR_SaveHandler_SaveModdedSave
+        public class SR_SaveHandler_SaveModdedSave
         {
             public static void Postfix(AutoSaveDirector director, string nextfilename)
             {
-                if (!Core.worldData.DataList.Any()) return;
+                if (!blames.DataList.Any()) return;
                 var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(),
                     worldDataPath, nextfilename.Substring(0, nextfilename.LastIndexOf('_')) + worldDataExt);
-                var blamestring = Core.EncodeBlames(Core.worldData);
+                var blamestring = EncodeBlames(blames);
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 var file = new BinaryWriter(File.Create(path));
                 file.Write(blamestring.Select(c => (byte)c).ToArray());
                 file.Close();
+            }
+        }
+
+        [HarmonyPatch(typeof(SlimeAppearanceDirector), nameof(SlimeAppearanceDirector.GetChosenSlimeAppearance), typeof(SlimeDefinition))]
+        public class SlimeAppearanceDirector_GetChosenSlimeAppearance_SlimeDefinition
+        {
+            public static bool Prefix(SlimeDefinition slimeDefinition, ref SlimeAppearance __result)
+            {
+                var name = slimeDefinition.GetFullName();
+                if (blames.HasPiece(name))
+                {
+                    var piece = blames.GetCompoundPiece(name);
+                    var strat = fusionModes[piece.GetValue<string>("mode")];
+                    return !strat.FixAppearance(slimeDefinition, ref __result);
+                }
+                return true;
             }
         }
     }
