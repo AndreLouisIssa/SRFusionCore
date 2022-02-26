@@ -20,4 +20,5 @@ And under the hood this mod
  - generates unique slime IDs: component slimes + category + hash of the strategy, components, parameters
  - invokes the strategies on missing IDs that match the blame allowing saves to be loaded 
          
-And adds a console command `fuse` to invoke a blamed strategy, marshalling arguments into it
+And adds a console command `fuse` to invoke a blamed strategy, marshalling arguments into it         
+`fuse <mode> <components> <parameters...>`
