@@ -8,44 +8,89 @@ namespace FusionCore
     {
         public class Form
         {
-            public readonly System.Type type;
+            public readonly Type type;
             public readonly string hint;
             public readonly Func<string, List<string>> auto;
-            public readonly Func<string, object> parse;
-            public readonly Func<object, string> represent = (v) => v.ToString();
-            public Form(System.Type type, string hint, Func<string, List<string>> auto, Func<string, object> parse, Func<object, string> represent = null)
+            public readonly Func<string, object> read;
+            public readonly Func<string, bool> check = (v) => true;
+            public readonly Func<object, string> show = (v) => v.ToString().ToLower();
+            public Form(Type type, string hint, Func<string, List<string>> auto, Func<string, object> read, Func<string, bool> check = null, Func<object, string> show = null)
             {
-                this.type = type; this.hint = hint; this.auto = auto; this.parse = parse; this.represent = represent ?? this.represent;
+                this.type = type; this.hint = hint; this.auto = auto; this.read = read; this.check = check ?? this.check; this.show = show ?? this.show;
             }
 
-            public T Parse<T>(string s) => (T)parse(s);
+            public virtual Form Is(string s)
+            {
+                return check(s) ? this : null;
+            }
 
-            public static Form Bool = new Form(typeof(bool), "true/false", s => new List<string>{ true.ToString(), false.ToString() }, s => bool.Parse(s), s => s.ToString().ToLower());
-            public static Form Int = new Form(typeof(int), "integer", s => new List<string>{ default(int).ToString() }, s => int.Parse(s));
-            public static Form Float = new Form(typeof(float), "float", s => new List<string>{ default(float).ToString() }, s => float.Parse(s));
-            public static Form Double = new Form(typeof(double), "double", s => new List<string>{ default(double).ToString() }, s => double.Parse(s));
+            public virtual Form Is(object o)
+            {
+                return type.IsAssignableFrom(o.GetType()) ? this : null;
+            }
+
+            public class Pipe : Form
+            {
+                public readonly Form from;
+                public readonly Form to;
+
+                public Pipe(Form from, Form to) : base(
+                    typeof(object), from.hint + "|" + to.hint, s => from.auto(s).Union(to.auto(s)).ToList(),
+                    s => from.check(s) ? from.read(s) : to.read(s), s => from.check(s) || to.check(s), o => from.Is(o).show(o)
+                ) { this.from = from; this.to = to; }
+
+                public static Form Many(params Form[] types)
+                {
+                    var type = types.First();
+                    foreach (var t in types.Skip(1))
+                        { type = new Pipe(type, t); }
+                    return type;
+                }
+
+                public override Form Is(string s)
+                {
+                    var t = from.Is(s);
+                    if (t == null)
+                        return to.Is(s);
+                    return t;
+                }
+
+                public override Form Is(object o)
+                {
+                    var t = from.Is(o);
+                    if (t == null)
+                        return to.Is(o);
+                    return t;
+                }
+            }
+
+            public static Form Bool = new Form(typeof(bool), "true/false", s => new List<string>{ true.ToString(), false.ToString() }, s => bool.Parse(s), s => bool.TryParse(s, out _));
+            public static Form Int = new Form(typeof(int), "integer", s => new List<string>{ default(int).ToString() }, s => int.Parse(s), s => int.TryParse(s, out _));
+            public static Form Float = new Form(typeof(float), "float", s => new List<string>{ default(float).ToString() }, s => float.Parse(s), s => float.TryParse(s, out _));
+            public static Form Double = new Form(typeof(double), "double", s => new List<string>{ default(double).ToString() }, s => double.Parse(s), s => double.TryParse(s, out _));
             public static Form String = new Form(typeof(string), "string", s => new List<string>{ }, s => s);
+            
             public static Form Slime = new Form(typeof(SlimeDefinition), "PINK_SLIME etc.",
                 s => SRSingleton<GameContext>.Instance.SlimeDefinitions.Slimes.Select(Core.GetFullName).ToList(),
-                s => Core.GetSlimeByFullName(s.ToUpper()), s => ((SlimeDefinition)s).GetFullName());
+                s => Core.GetSlimeByFullName(s), s => true, s => ((SlimeDefinition)s).GetFullName());
             public static Form PureSlime = new Form(typeof(SlimeDefinition), "PINK etc.",
-                s => Core.pureSlimes.Keys.ToList(), s => Core.pureSlimes[s.ToUpper()], s => Core.PureName(((SlimeDefinition)s).GetFullName()));
+                s => Core.pureSlimes.Keys.ToList(), s => Core.pureSlimes[s], s => true, s => Core.PureName(((SlimeDefinition)s).GetFullName()));
             public static Form PurePair = new Form(typeof(List<SlimeDefinition>), "PINK-GOLD etc.",
             s => {
                 var chosen = s.Substring(0, s.IndexOf('-') + 1).ToUpper();
                 return Core.pureSlimes.Keys.Select(k => chosen + k).ToList();
             }, s => {
                 return Core.PureSlimeFullNames(s.ToUpper()).Select(Core.GetSlimeByFullName).ToList();
-            },  l => {
+            }, s=> true, l => {
                 return string.Join("-",((List<SlimeDefinition>)l).Select(Core.GetFullName).Select(Core.PureName));
             });
-            public static Form PureSlimes = new Form(typeof(List<SlimeDefinition>), "PINK-GOLD-BOOM etc.",
+            public static Form PureSlimes = new Form(typeof(List<SlimeDefinition>), "PINK-GOLD etc.",
             s => {
                 var chosen = s.Substring(0, s.LastIndexOf('-') + 1).ToUpper();
                 return Core.pureSlimes.Keys.Select(k => chosen + k).ToList();
             }, s => {
-                return Core.PureSlimeFullNames(s.ToUpper()).Select(Core.GetSlimeByFullName).ToList();
-            },  l => {
+                return Core.PureSlimeFullNames(s).Select(Core.GetSlimeByFullName).ToList();
+            }, s => true, l => {
                 return string.Join("-",((List<SlimeDefinition>)l).Select(Core.GetFullName).Select(Core.PureName));
             });
         }
@@ -57,17 +102,17 @@ namespace FusionCore
 
         public Parameter(Form type, object value)
         {
-            this.type = type; this.value = Convert.ChangeType(value, type.type);
+            this.type = type; this.value = value;
         }
 
         public static Parameter Parse(Form type, string value)
         {
-            return new Parameter(type, type.parse(value));
+            return new Parameter(type, type.read(value));
         }
 
         public override string ToString()
         {
-            return type.represent(value);
+            return type.show(value);
         }
 
         public override int GetHashCode()

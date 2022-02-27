@@ -46,7 +46,7 @@ namespace FusionCore
 
         public List<SlimeDefinition> ParseComponents(string fusion)
         {
-            return (List<SlimeDefinition>)Fusion.parse(fusion);
+            return (List<SlimeDefinition>)Fusion.read(fusion);
         }
 
         public List<SlimeDefinition> ParseComponents(IEnumerable<string> ids)
@@ -60,7 +60,7 @@ namespace FusionCore
             var arglist = args.ToList();
             var parameters = Required.Select((p, i) => Parameter.Parse(p.type, arglist[i]));
             parameters = parameters.Concat(Optional.Select((p, i) => (p, i + Required.Count))
-                .Select(t => Parameter.Parse(t.p.type, t.Item2 < arglist.Count ? arglist[t.Item2] : t.p.type.represent(t.p.init))));
+                .Select(t => Parameter.Parse(t.p.type, t.Item2 < arglist.Count ? arglist[t.Item2] : t.p.type.show(t.p.init))));
             if (Variadic.Any() && arglist.Count > parameters.Count())
             {
                 var e = Variadic.GetEnumerator();
