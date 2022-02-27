@@ -1,6 +1,6 @@
 # SRFusionCore: Slime Rancher Fusion Core Mod
 
-Modders provide a `FusionCore.Strategy` which contains a factory delegate and some metadata
+Modders provide a `FusionCore.Mode` which contains a factory delegate and some metadata
       
 The strategy's factory can make use of members in a static helper class
  - list of all pure slimes by very late startup
@@ -19,6 +19,7 @@ And under the hood this mod
  - registers slimes created by manual invocation with the parameters and blame cached in the save registry if run while in a save
  - generates unique slime IDs: component slimes + category + hash of the strategy, components, parameters
  - invokes the strategies on missing IDs that match the blame allowing saves to be loaded 
+ - a way to fix the appearance of slime definitions created while in a world
          
 And adds a console command `fuse` to invoke a blamed strategy, marshalling arguments into it         
 `fuse <mode> <components> <parameters...>`
