@@ -49,6 +49,16 @@ namespace FusionCore
             return id;
         }
 
+        public static bool TryNewIdentifiableID(string name, out Identifiable.Id id, SRMod mod = null)
+        {
+            id = Identifiable.Id.NONE;
+            if (Enum.IsDefined(typeof(Identifiable.Id), name)) return false;
+            id = InvokeAsStep(() => IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name));
+            if (mod is null) mod = SRMod.GetCurrentMod();
+            IdentifiableRegistry.moddedIdentifiables[id] = mod;
+            return true;
+        }
+
         public static SlimeDefinition GetSlimeByFullName(string name)
         {
             SlimeDefinitions defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
