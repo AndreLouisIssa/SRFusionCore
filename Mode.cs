@@ -11,10 +11,10 @@ namespace FusionCore
         public static int globalInvokeCounter = 0;
         public int localInvokeCounter = 0;
 
-        public static IEnumerable<(Parameter.Form type, string label)> EmptyVariadic()
+        public static IEnumerable<(Parameter.Form form, string label)> EmptyVariadic()
             { yield break; }
-        public static IEnumerable<(Parameter.Form type, string label)> RepeatVariadic(Parameter.Form type, string label)
-            { while (true) yield return (type, label); }
+        public static IEnumerable<(Parameter.Form form, string label)> RepeatVariadic(Parameter.Form form, string label)
+            { while (true) yield return (form, label); }
 
         protected abstract SlimeDefinition Produce(ref List<SlimeDefinition> components, ref List<Parameter> parameters);
         public virtual bool FixAppearance(SlimeDefinition slime, ref SlimeAppearance appearance) => false;
@@ -23,9 +23,9 @@ namespace FusionCore
         public abstract string Blame { get; }
         public abstract string Category { get; }
         public virtual Parameter.Form Fusion => Parameter.Form.PureSlimes;
-        public virtual List<(Parameter.Form type, string label)> Required => new List<(Parameter.Form, string)>();
-        public virtual List<(Parameter.Form type, string label, object init)> Optional => new List<(Parameter.Form, string, object)>();
-        public virtual IEnumerable<(Parameter.Form type, string label)> Variadic => EmptyVariadic();
+        public virtual List<(Parameter.Form form, string label)> Required => new List<(Parameter.Form, string)>();
+        public virtual List<(Parameter.Form form, string label, object init)> Optional => new List<(Parameter.Form, string, object)>();
+        public virtual IEnumerable<(Parameter.Form form, string label)> Variadic => EmptyVariadic();
 
         public void Register() { fusionModes[Blame] = this; }
 
@@ -58,14 +58,14 @@ namespace FusionCore
         public List<Parameter> ParseParameters(IEnumerable<string> args)
         {
             var arglist = args.ToList();
-            var parameters = Required.Select((p, i) => Parameter.Parse(p.type, arglist[i]));
+            var parameters = Required.Select((p, i) => Parameter.Parse(p.form, arglist[i]));
             parameters = parameters.Concat(Optional.Select((p, i) => (p, i + Required.Count))
-                .Select(t => Parameter.Parse(t.p.type, t.Item2 < arglist.Count ? arglist[t.Item2] : t.p.type.show(t.p.init))));
+                .Select(t => Parameter.Parse(t.p.form, t.Item2 < arglist.Count ? arglist[t.Item2] : t.p.form.show(t.p.init))));
             if (Variadic.Any() && arglist.Count > parameters.Count())
             {
                 var e = Variadic.GetEnumerator();
                 parameters = parameters.Concat(arglist.Skip(parameters.Count())
-                    .Select((a, i) => Parameter.Parse(Variadic.Skip(i).First().type, a)));
+                    .Select((a, i) => Parameter.Parse(Variadic.Skip(i).First().form, a)));
             }
             return parameters.ToList();
         }

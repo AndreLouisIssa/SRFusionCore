@@ -29,23 +29,23 @@ namespace FusionCore
                 return type.IsAssignableFrom(o.GetType()) ? this : null;
             }
 
-            public class Pipe : Form
+            public static Form Join(params Form[] types)
+            {
+                var type = types.First();
+                foreach (var t in types.Skip(1))
+                    { type = new JoinPair(type, t); }
+                return type;
+            }
+
+            public class JoinPair : Form
             {
                 public readonly Form from;
                 public readonly Form to;
 
-                public Pipe(Form from, Form to) : base(
+                public JoinPair(Form from, Form to) : base(
                     typeof(object), from.hint + "|" + to.hint, s => from.auto(s).Union(to.auto(s)).ToList(),
-                    s => from.check(s) ? from.read(s) : to.read(s), s => from.check(s) || to.check(s), o => from.Is(o).show(o)
+                    s => (from.Is(s) ?? to.Is(s)).read(s), s => from.check(s) || to.check(s), o => (from.Is(o) ?? to.Is(o)).show(o)
                 ) { this.from = from; this.to = to; }
-
-                public static Form Many(params Form[] types)
-                {
-                    var type = types.First();
-                    foreach (var t in types.Skip(1))
-                        { type = new Pipe(type, t); }
-                    return type;
-                }
 
                 public override Form Is(string s)
                 {
@@ -64,7 +64,7 @@ namespace FusionCore
                 }
             }
 
-            public static Form Bool = new Form(typeof(bool), "true/false", s => new List<string>{ true.ToString(), false.ToString() }, s => bool.Parse(s), s => bool.TryParse(s, out _));
+            public static Form Bool = new Form(typeof(bool), "true|false", s => new List<string>{ true.ToString(), false.ToString() }, s => bool.Parse(s), s => bool.TryParse(s, out _));
             public static Form Int = new Form(typeof(int), "integer", s => new List<string>{ default(int).ToString() }, s => int.Parse(s), s => int.TryParse(s, out _));
             public static Form Float = new Form(typeof(float), "float", s => new List<string>{ default(float).ToString() }, s => float.Parse(s), s => float.TryParse(s, out _));
             public static Form Double = new Form(typeof(double), "double", s => new List<string>{ default(double).ToString() }, s => double.Parse(s), s => double.TryParse(s, out _));
@@ -95,24 +95,24 @@ namespace FusionCore
             });
         }
 
-        public readonly Form type;
+        public readonly Form form;
         public readonly object value;
 
         public T GetValue<T>() => (T)value;
 
-        public Parameter(Form type, object value)
+        public Parameter(Form form, object value)
         {
-            this.type = type; this.value = value;
+            this.form = form; this.value = value;
         }
 
-        public static Parameter Parse(Form type, string value)
+        public static Parameter Parse(Form form, string value)
         {
-            return new Parameter(type, type.read(value));
+            return new Parameter(form, form.read(value));
         }
 
         public override string ToString()
         {
-            return type.show(value);
+            return form.show(value);
         }
 
         public override int GetHashCode()

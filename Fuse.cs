@@ -21,9 +21,9 @@ namespace FusionCore
             var any = strat.Required.Any() || (clamp && strat.Optional.Any());
             log($"{(preface != null ? preface + " as " : "")}the {TitleCase(strat.Blame)} mode takes {(!clamp ? "at least " : "") }{1 + strat.Required.Count}" +
                 $"{(clamp ? $" to {1 + strat.Required.Count + strat.Optional.Count}" : "")} arg{(any ? "s" : "")}");
-            Log.Info($"required: {$"<fusion ({strat.Fusion.hint})>"} {string.Join(" ", strat.Required.Select(t => $"<{t.label ?? ""} ({t.type.hint})>"))}");
-            if (strat.Optional.Any()) Log.Info($"optional: {string.Join(" ", strat.Optional.Select(t => $"<{t.label ?? ""} ({t.type.hint}) = {t.init}>"))}");
-            if (strat.Variadic.Any()) Log.Info($"variadic: {string.Join(" ", strat.Variadic.TakeWhile((t, i) => i < 6).Select(t => $"<{t.label ?? ""} ({t.type.hint})>"))}...");
+            Log.Info($"required: {$"<fusion ({strat.Fusion.hint})>"} {string.Join(" ", strat.Required.Select(t => $"<{t.label ?? ""} ({t.form.hint})>"))}");
+            if (strat.Optional.Any()) Log.Info($"optional: {string.Join(" ", strat.Optional.Select(t => $"<{t.label ?? ""} ({t.form.hint}) = {t.init}>"))}");
+            if (strat.Variadic.Any()) Log.Info($"variadic: {string.Join(" ", strat.Variadic.TakeWhile((t, i) => i < 6).Select(t => $"<{t.label ?? ""} ({t.form.hint})>"))}...");
         }
 
         public override bool Execute(string[] args)
@@ -62,10 +62,10 @@ namespace FusionCore
             if (argIndex == 1) return strat.Fusion.auto(argText);
             if (currentArgs.Skip(2).Any(s => s.Contains("\""))) return base.GetAutoComplete(argIndex, argText);
             int i = 1 + strat.Required.Count; int j = i + strat.Optional.Count;
-            if (argIndex <= i) return strat.Required[argIndex - 1].type.auto(argText);
-            if (strat.Variadic.Any() || argIndex <= j) return strat.Optional[argIndex - i - 1].type.auto(argText);
+            if (argIndex <= i) return strat.Required[argIndex - 1].form.auto(argText);
+            if (strat.Variadic.Any() || argIndex <= j) return strat.Optional[argIndex - i - 1].form.auto(argText);
             if (strat.Variadic.Any()) return strat.Variadic.SkipWhile((t, k) => k < argIndex - j)
-                    .TakeWhile((t, k) => k == 0).SelectMany(t => t.type.auto(argText)).ToList();
+                    .TakeWhile((t, k) => k == 0).SelectMany(t => t.form.auto(argText)).ToList();
             return base.GetAutoComplete(argIndex, argText);
         }
     }
