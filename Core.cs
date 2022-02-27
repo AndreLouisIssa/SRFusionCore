@@ -254,7 +254,7 @@ namespace FusionCore
         public static string DisplayName(string suffix, List<SlimeDefinition> components)
         {
             return string.Join(" ", PureSlimeFullNames(components.Select(GetFullName))
-                .Select(GetSlimeByFullName).Select(s => GetDisplayName(s) ?? TitleCase(s.GetFullName().Replace("_", " "))).Select(s => s.Contains(' ') ? s.Substring(0,s.LastIndexOf(' ')) : s).Append(suffix));
+                .Select(GetSlimeByFullName).Select(s => GetDisplayName(s) ?? TitleCase(s.GetFullName().Replace("_", " "))).Select(s => s.Contains(' ') ? s.Substring(0,s.LastIndexOf(' ')) : s).Append(TitleCase(suffix)));
         }
 
         public static void InvokeAsStep(Action run, SRModLoader.LoadingStep step = SRModLoader.LoadingStep.PRELOAD)
