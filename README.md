@@ -23,3 +23,5 @@ And under the hood this mod
          
 And adds a console command `fuse` to invoke a blamed strategy, marshalling arguments into it         
 `fuse <mode> <components> <parameters...>`
+
+Also mirrored on [Nexus Mods](https://www.nexusmods.com/slimerancher/mods/317)
