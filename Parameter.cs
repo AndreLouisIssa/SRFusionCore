@@ -6,6 +6,7 @@ namespace FusionCore
 {
     public class Parameter
     {
+        // @MagicGonads
         public class Form
         {
             public readonly Type type;

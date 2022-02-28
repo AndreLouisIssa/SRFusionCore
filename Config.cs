@@ -5,6 +5,7 @@ namespace FusionCore
     [ConfigFile("settings")]
     public static class Config
     {
-        public static string exclude = "GLITCH";
+        // @MagicGonads
+        public static string exclude = "GLITCH_SLIME; TARR_SLIME; GLITCH_TARR_SLIME";
     }
 }

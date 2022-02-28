@@ -8,6 +8,7 @@ namespace FusionCore
 {
     public class Fuse : ConsoleCommand
     {
+        // @MagicGonads @Aidanamite
         public static readonly Fuse instance = new Fuse();
 
         public override string Usage => "fuse <mode> <components> <required> <optional> <variadic>";
@@ -16,6 +17,7 @@ namespace FusionCore
 
         public void Help(Mode strat, string preface = null, Action<string> log = null)
         {
+            // @MagicGonads
             if (log == null) log = (s) => Log.Error(s);
             var clamp = !strat.Variadic.Any();
             var any = strat.Required.Any() || (clamp && strat.Optional.Any());
@@ -28,6 +30,7 @@ namespace FusionCore
 
         public override bool Execute(string[] args)
         {
+            // @MagicGonads
             if (args == null || args.Length < 1)
                 { Log.Error("you must specify a mode to fuse using"); return false; }
             var blame = args[0].ToLower();
@@ -50,17 +53,16 @@ namespace FusionCore
             return true;
         }
 
-        public List<string> currentArgs = null;
-
         public override List<string> GetAutoComplete(int argIndex, string argText)
         {
-            currentArgs = ConsoleWindow.cmdText.Split(' ').Skip(1).ToList();
+            // @MagicGonads
+            var args = ConsoleWindow.cmdText.Split(' ').Skip(1).ToList();
             if (argIndex == 0) return fusionModes.Keys.Select(s => TitleCase(s)).Append("help").ToList();
-            var blame = currentArgs[0].ToLower();
+            var blame = args[0].ToLower();
             if (blame == "help" && argIndex == 1) return fusionModes.Keys.Select(s => TitleCase(s)).ToList();
             if (!fusionModes.TryGetValue(blame, out var strat)) return base.GetAutoComplete(argIndex, argText);
             if (argIndex == 1) return strat.Fusion.auto(argText);
-            if (currentArgs.Skip(2).Any(s => s.Contains("\""))) return base.GetAutoComplete(argIndex, argText);
+            if (args.Skip(2).Any(s => s.Contains("\""))) return base.GetAutoComplete(argIndex, argText);
             int i = 1 + strat.Required.Count; int j = i + strat.Optional.Count;
             if (argIndex <= i) return strat.Required[argIndex - 1].form.auto(argText);
             if (strat.Variadic.Any() || argIndex <= j) return strat.Optional[argIndex - i - 1].form.auto(argText);

@@ -8,6 +8,7 @@ namespace FusionCore
 {
     public abstract class Mode
     {
+        // @MagicGonads @Aidanamite
         public static int globalInvokeCounter = 0;
         public int localInvokeCounter = 0;
 
@@ -33,6 +34,7 @@ namespace FusionCore
 
         public SlimeDefinition Produce(List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
+            // @MagicGonads
             parameters = parameters ?? new List<Parameter>();
             components = components.SelectMany(c => PureSlimeFullNames(c.GetFullName()).Select(GetSlimeByFullName)).ToList();
             var gc = ++globalInvokeCounter; var lc = ++localInvokeCounter;
@@ -46,17 +48,20 @@ namespace FusionCore
 
         public List<SlimeDefinition> ParseComponents(string fusion)
         {
+            // @MagicGonads
             return (List<SlimeDefinition>)Fusion.read(fusion);
         }
 
         public List<SlimeDefinition> ParseComponents(IEnumerable<string> ids)
         {
+            // @MagicGonads
             var defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
             return ids.Select(i => defns.GetSlimeByIdentifiableId((Identifiable.Id)Enum.Parse(typeof(Identifiable.Id),i))).ToList();
         }
 
         public List<Parameter> ParseParameters(IEnumerable<string> args)
         {
+            // @MagicGonads
             var arglist = args.ToList();
             var parameters = Required.Select((p, i) => Parameter.Parse(p.form, arglist[i]));
             parameters = parameters.Concat(Optional.Select((p, i) => (p, i + Required.Count))
@@ -72,6 +77,7 @@ namespace FusionCore
 
         public void RememberID(Identifiable.Id id, List<SlimeDefinition> components, List<Parameter> parameters)
         {
+            // @MagicGonads @Aidanamite
             var data = new CompoundDataPiece(id.ToString());
             data.SetValue("mode", Blame);
             data.SetValue("category", Category);
@@ -82,22 +88,26 @@ namespace FusionCore
 
         public string UniqueFirstName(List<SlimeDefinition> components)
         {
+            // @MagicGonads
             return string.Join("_", components.SelectMany(c => DecomposePureSlimeNames(c.GetFullName())).Select(PureName));
         }
 
         public int UniqueSurnameHash(List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
+            // @MagicGonads
             var hash = (parameters is null || !parameters.Any()) ? 0 : parameters.Select(p => p.GetHashCode()).Aggregate((h1, h2) => 27 * h1 + h2);
             return 13 * hash + components.Select(c => c.IdentifiableId.GetHashCode()).Aggregate((h1, h2) => 11 * h1 + h2) + 71 * GetHashCode();
         }
 
         public string UniqueFullName(string suffix, List<SlimeDefinition> components, List<Parameter> parameters = null)
         {
+            // @MagicGonads
             return $"{UniqueFirstName(components)}_{suffix}_{EncodeHash(UniqueSurnameHash(components, parameters))}";
         }
 
         public string DebugName(SlimeDefinition slime)
         {
+            // @MagicGonads
             var display = slime.GetDisplayName();
             if (display != null) display = "\"" + display + "\"";
             else display = "<MISSING DISPLAY NAME>";

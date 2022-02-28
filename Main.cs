@@ -14,11 +14,14 @@ namespace FusionCore
 {
     public class Main : ModEntryPoint
     {
+        // @MagicGonads @Aidanamite
         public static readonly string worldDataPath = "FusionCoreWorldData";
         public static readonly string worldDataExt = ".txt";
 
         public override void PreLoad()
         {
+            // @MagicGonads @Aidanamite
+            // prepare all the side effects
             HarmonyInstance.PatchAll();
             EnumTranslator.RegisterFallbackHandler<Identifiable.Id>(ResolveMissingID);
             OnMainMenuLoaded += (_) => blames.DataList.Clear();
@@ -28,21 +31,9 @@ namespace FusionCore
         [HarmonyPatch(typeof(SRModLoader), nameof(SRModLoader.LoadMods))]
         public class SRModLoader_LoadMods
         {
-            public static void Postfix()
-            {
-                Setup();
-            }
-        }
-
-        [HarmonyPatch(typeof(SRModLoader), nameof(SRModLoader.CurrentLoadingStep), MethodType.Getter)]
-        public class SRModLoader_get_CurrentLoadingStep
-        {
-            public static bool _override = false;
-            public static SRModLoader.LoadingStep _step = SRModLoader.LoadingStep.PRELOAD;
-            public static void Postfix(ref SRModLoader.LoadingStep __result)
-            {
-                if (_override) __result = _step;
-            }
+            // @MagicGonads @Aidanamite
+            // load after all the regular mods should have finished creating all their slimes so we can cache them
+            public static void Postfix() { Setup(); }
         }
 
         [HarmonyPatch(typeof(IdentifiableRegistry), nameof(IdentifiableRegistry.CategorizeId))]
@@ -50,6 +41,9 @@ namespace FusionCore
         {
             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
+                // @MagicGonads @Aidanamite
+                // trick SR into thinking our fusion IDs belong to whichever category the mode says it should be
+                // so it doesn't matter what we name the ID, allowing for different suffixes such as an added hash
                 var code = instructions.ToList();
                 var ind = code.FindIndex((x) => x.opcode == OpCodes.Stloc_0);
                 code.Insert(ind++, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Core), nameof(AdjustCategoryName))));
@@ -62,6 +56,9 @@ namespace FusionCore
         {
             public static void Prefix(AutoSaveDirector director, string savename)
             {
+                // @MagicGonads @Aidanamite
+                // read world data before the enum patcher has a chance to resolve missing IDs
+                // so we have the data necessary to fix those IDs based on blamed modes
                 var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(),
                     worldDataPath, savename.Substring(0, savename.LastIndexOf('_')) + worldDataExt);
                 if (File.Exists(path))
@@ -76,6 +73,9 @@ namespace FusionCore
         {
             public static void Postfix(AutoSaveDirector director, string nextfilename)
             {
+                // @MagicGonads
+                // save world data blaming modes for the fusion IDs that are present by the time of this save
+                // this covers at least all the IDs necessary to be able to reload that save safely
                 if (!blames.DataList.Any()) return;
                 var path = Path.Combine(((FileStorageProvider)director.StorageProvider).SavePath(),
                     worldDataPath, nextfilename.Substring(0, nextfilename.LastIndexOf('_')) + worldDataExt);
@@ -92,6 +92,9 @@ namespace FusionCore
         {
             public static bool Prefix(SlimeDefinition slimeDefinition, ref SlimeAppearance __result)
             {
+                // @MagicGonads @Aidanamite
+                // override cached slime appearance to fix an issue where slime definitions
+                // created while a world is loaded would be invisible and cause an NRE
                 var name = slimeDefinition.GetFullName();
                 if (blames.HasPiece(name))
                 {
