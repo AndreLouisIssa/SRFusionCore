@@ -193,7 +193,8 @@ namespace FusionCore
         {
             // @MagicGonads
             SlimeDefinitions defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
-            return defns.Slimes.Where(slime => !exemptSlimes.Contains(slime.IdentifiableId) && !Config.exclude.Split(' ').Contains(slime.GetFullName())).ToList();
+            return defns.Slimes.Where(slime => !exemptSlimes.Contains(slime.IdentifiableId) &&
+                (Config.exclude == "" || !Config.exclude.Split(' ').Contains(slime.GetFullName()))).ToList();
         }
 
         public static string PureName(string name)
