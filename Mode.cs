@@ -24,10 +24,12 @@ namespace FusionCore
         public override int GetHashCode() { return Blame.GetHashCode(); }
         public abstract string Blame { get; }
         public abstract string Category { get; }
-        public virtual Form Fusion => Form.PureSlimes;
+        public virtual Form Fusion => Form.Forms.PureSlimes;
         public virtual List<(Form form, string label)> Required => new List<(Form, string)>();
         public virtual List<(Form form, string label, object init)> Optional => new List<(Form, string, object)>();
         public virtual IEnumerable<(Form form, string label)> Variadic => EmptyVariadic();
+        public virtual bool Hidden => false;
+        public virtual bool Silent => false;
 
         public void Register() { fusionModes[Blame] = this; }
 
