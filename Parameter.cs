@@ -72,7 +72,7 @@ namespace FusionCore
             public static Form String = new Form(typeof(string), "string", s => new List<string>{ }, s => s);
             
             public static Form Slime = new Form(typeof(SlimeDefinition), "PINK_SLIME etc.",
-                s => SRSingleton<GameContext>.Instance.SlimeDefinitions.Slimes.Select(Core.GetFullName).ToList(),
+                s => GameContext.Instance.SlimeDefinitions.Slimes.Select(Core.GetFullName).ToList(),
                 s => Core.GetSlimeByFullName(s), s => true, s => ((SlimeDefinition)s).GetFullName());
             public static Form PureSlime = new Form(typeof(SlimeDefinition), "PINK etc.",
                 s => Core.pureSlimes.Keys.ToList(), s => Core.pureSlimes[s], s => true, s => Core.PureName(((SlimeDefinition)s).GetFullName()));

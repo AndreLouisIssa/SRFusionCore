@@ -35,8 +35,8 @@ namespace FusionCore
         public SlimeDefinition Produce(List<SlimeDefinition> components, List<Parameter> parameters, out bool isNew)
         {
             // @MagicGonads
-            parameters = parameters ?? new List<Parameter>();
-            components = components.SelectMany(c => PureSlimeFullNames(c.GetFullName()).Select(GetSlimeByFullName)).ToList();
+            components = components.ToList();
+            parameters = parameters.ToList();
             var gc = ++globalInvokeCounter; var lc = ++localInvokeCounter;
             Log.Info($"{nameof(FusionCore)}: [#{gc}|#{lc}] Fusing in mode {Blame}..." +
                 $" (on {string.Join(", ", components.Select(Core.GetFullName))}) (with {string.Join(", ", parameters)}...)");
@@ -49,9 +49,14 @@ namespace FusionCore
             return slime;
         }
 
-        public SlimeDefinition Produce(List<SlimeDefinition> components, List<Parameter> parameters = null)
+        public SlimeDefinition Produce(List<SlimeDefinition> components, List<Parameter> parameters)
         {
             return Produce(components, parameters, out _);
+        }
+
+        public SlimeDefinition Produce(List<SlimeDefinition> components)
+        {
+            return Produce(components, new List<Parameter>());
         }
 
         public List<SlimeDefinition> ParseComponents(string fusion)
@@ -63,7 +68,7 @@ namespace FusionCore
         public List<SlimeDefinition> ParseComponents(IEnumerable<string> ids)
         {
             // @MagicGonads
-            var defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
+            var defns = GameContext.Instance.SlimeDefinitions;
             return ids.Select(i => defns.GetSlimeByIdentifiableId((Identifiable.Id)Enum.Parse(typeof(Identifiable.Id),i))).ToList();
         }
 

@@ -64,7 +64,7 @@ namespace FusionCore
         public static SlimeDefinition GetSlimeByFullName(string name)
         {
             // @MagicGonads
-            SlimeDefinitions defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
+            SlimeDefinitions defns = GameContext.Instance.SlimeDefinitions;
             return defns.GetSlimeByIdentifiableId((Identifiable.Id)Enum.Parse(typeof(Identifiable.Id), name));
         }
 
@@ -193,7 +193,7 @@ namespace FusionCore
         public static List<SlimeDefinition> AllSlimes()
         {
             // @MagicGonads
-            SlimeDefinitions defns = SRSingleton<GameContext>.Instance.SlimeDefinitions;
+            SlimeDefinitions defns = GameContext.Instance.SlimeDefinitions;
             return defns.Slimes.Where(slime => !exemptSlimes.Contains(slime.IdentifiableId) &&
                 (Config.exclude == "" || !Config.exclude.Split(' ').Contains(slime.GetFullName()))).ToList();
         }
@@ -341,6 +341,16 @@ namespace FusionCore
                 return fusionModes[data.GetValue<string>("mode")].ParseComponents(data.GetValue<string[]>("components"));
             }
             return null;
+        }
+
+        public static List<SlimeDefinition> FlattenComponents(IEnumerable<SlimeDefinition> components)
+        {
+            return components.SelectMany(c => PureSlimeFullNames(c.GetFullName()).Select(GetSlimeByFullName)).ToList();
+        }
+
+        public static List<SlimeDefinition> FlattenComponents(params SlimeDefinition[] components)
+        {
+            return FlattenComponents(components);
         }
     }
 }
