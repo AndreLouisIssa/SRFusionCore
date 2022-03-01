@@ -22,89 +22,26 @@ namespace FusionCore
         public static void OnWorldDataLoad(CompoundDataPiece data)
         {
             // @MagicGonads @Aidanamite
-            string fixer(string id) => SaveHandler.data.enumTranslator.TranslateEnum(EnumTranslator.TranslationMode.FROMTRANSLATED, id);
+            string fixer(string id) => id;//SaveHandler.data.enumTranslator.TranslateEnum(EnumTranslator.TranslationMode.FROMTRANSLATED, id);
 
             foreach (var p in data.DataList)
             {
                 if (blames.DataList.Contains(p)) blames.DataList.Remove(p);
-                if (p.data is string s) p.data = fixer(s);
+                p.key = fixer(p.key);
+                var d = data.GetCompoundPiece(p.key);
+                var pp = d.GetPiece<string[]>("components");
+                pp.data = ((string[])pp.data).Select(fixer).ToArray();
+                if (!fusionModes.TryGetValue(p.key, out var mode))
+                {
+                    Log.Warning($"{nameof(FusionCore)}: No mode '{p.key}' exists, won't translate parameters!");
+                }
+                else
+                {
+                    pp = d.GetPiece<string[]>("parameters");
+                    pp.data = ((string[])pp.data).Select((s,i) => mode.GetArgumentForm(i).isEnum ? fixer(s) : s).ToArray();
+                }
                 blames.DataList.Add(p);
             }
-        }
-
-        public static string AdjustCategoryName(string original)
-        {
-            // @MagicGonads @Aidanamite
-            if (blames.HasPiece(original))
-                return "_" + blames.GetCompoundPiece(original).GetValue<string>("category");
-            return original;
-        }
-
-        public static Identifiable.Id NewIdentifiableID(string name, SRMod mod = null)
-        {
-            // @MagicGonads @Aidanamite
-            if (Enum.IsDefined(typeof(Identifiable.Id), name)) throw new Exception($"{nameof(FusionCore)}: ID already exists: {name}");
-            var id = InvokeAsStep(() => IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name));
-            if (mod is null) mod = SRMod.GetCurrentMod();
-            IdentifiableRegistry.moddedIdentifiables[id] = mod;
-            return id;
-        }
-
-        public static bool TryNewIdentifiableID(string name, out Identifiable.Id id, SRMod mod = null)
-        {
-            // @MagicGonads @Aidanamite
-            id = Identifiable.Id.NONE;
-            if (Enum.IsDefined(typeof(Identifiable.Id), name)) return false;
-            id = InvokeAsStep(() => IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name));
-            if (mod is null) mod = SRMod.GetCurrentMod();
-            IdentifiableRegistry.moddedIdentifiables[id] = mod;
-            return true;
-        }
-
-        public static SlimeDefinition GetSlimeByFullName(string name)
-        {
-            // @MagicGonads
-            SlimeDefinitions defns = GameContext.Instance.SlimeDefinitions;
-            return defns.GetSlimeByIdentifiableId((Identifiable.Id)Enum.Parse(typeof(Identifiable.Id), name));
-        }
-
-        public static string GetFullName(this SlimeDefinition slime)
-        {
-            // @MagicGonads
-            return slime.IdentifiableId.ToString();
-        }
-
-        public static void SetDisplayName(this SlimeDefinition slime, string name)
-        {
-            // @MagicGonads @Lionmeow
-            var entry = "l." + slime.GetFullName().ToLower();
-            var hasDone = TranslationPatcher.doneDictionaries.ContainsKey("actor");
-            if (hasDone && TranslationPatcher.doneDictionaries["actor"].ContainsKey(entry))
-                TranslationPatcher.doneDictionaries["actor"].Remove(entry);
-            InvokeAsStep(() => TranslationPatcher.AddActorTranslation(entry, name));
-            if (hasDone) TranslationPatcher.doneDictionaries["actor"][entry] = name;
-            if (TranslationPatcher.patches.ContainsKey("actor"))
-                TranslationPatcher.patches["actor"][entry] = name;
-        }
-
-        public static string GetDisplayName(this SlimeDefinition slime, out Dictionary<string, string> dict)
-        {
-            // @MagicGonads @Lionmeow
-            var entry = "l." + slime.GetFullName().ToLower();
-            dict = null;
-            if (TranslationPatcher.doneDictionaries.ContainsKey("actor") && (dict = TranslationPatcher.doneDictionaries["actor"]).ContainsKey(entry))
-            {
-                return TranslationPatcher.doneDictionaries["actor"][entry];
-            }
-            if (TranslationPatcher.patches.ContainsKey("actor") && (dict = TranslationPatcher.patches["actor"]).ContainsKey(entry))
-                return TranslationPatcher.patches["actor"][entry];
-            return TitleCase(slime.GetFullName().Replace("_", " "));
-        }
-
-        public static string GetDisplayName(this SlimeDefinition slime)
-        {
-            // @MagicGonads @Lionmeow
-            return GetDisplayName(slime, out _);
         }
 
         public static bool ResolveMissingID(ref string value)
@@ -112,14 +49,27 @@ namespace FusionCore
             // @MagicGonads
             var data = blames.GetCompoundPiece(value);
             var blame = data.GetValue<string>("mode");
-            if (!fusionModes.TryGetValue(blame, out var strat))
+            if (!fusionModes.TryGetValue(blame, out var mode))
             {
-                Log.Error($"{nameof(FusionCore)}: No strategy '{blame}' exists to fix missing ID {value}!");
+                Log.Error($"{nameof(FusionCore)}: No mode '{blame}' exists to fix missing ID {value}!");
                 return false;
             }
-            var components = strat.ParseComponents(data.GetValue<string[]>("components"));
-            var parameters = strat.ParseParameters(data.GetValue<string[]>("parameters"));
-            value = strat.Produce(components, parameters).GetFullName();
+            
+            string fixer(string id)
+            {
+                if (blames.HasPiece(id) && !TryGetSlimeByFullName(id, out _))
+                    { var _id = id; if(ResolveMissingID(ref _id)) id = _id; }
+                return id;
+            };
+
+            var piece = data.GetPiece<string[]>("components");
+            piece.data = piece.data = ((string[])piece.data).Select(fixer).ToArray();
+            piece = data.GetPiece<string[]>("parameters");
+            piece.data = ((string[])piece.data).Select((s,i) => mode.GetArgumentForm(i).isEnum ? fixer(s) : s).ToArray();
+
+            var components = mode.ParseComponents(data.GetValue<string[]>("components"));
+            var parameters = mode.ParseParameters(data.GetValue<string[]>("parameters"));
+            value = mode.Produce(components, parameters).GetFullName();
             return true;
         }
 
@@ -164,6 +114,88 @@ namespace FusionCore
                 i %= 5;
             }
             return blames;
+        }
+
+        public static string AdjustCategoryName(string original)
+        {
+            // @MagicGonads @Aidanamite
+            if (blames.HasPiece(original))
+                return "_" + blames.GetCompoundPiece(original).GetValue<string>("category");
+            return original;
+        }
+
+        public static Identifiable.Id NewIdentifiableID(string name, SRMod mod = null)
+        {
+            // @MagicGonads @Aidanamite
+            if (Enum.IsDefined(typeof(Identifiable.Id), name)) throw new Exception($"{nameof(FusionCore)}: ID already exists: {name}");
+            var id = InvokeAsStep(() => IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name));
+            if (mod is null) mod = SRMod.GetCurrentMod();
+            IdentifiableRegistry.moddedIdentifiables[id] = mod;
+            return id;
+        }
+
+        public static bool TryNewIdentifiableID(string name, out Identifiable.Id id, SRMod mod = null)
+        {
+            // @MagicGonads @Aidanamite
+            id = Identifiable.Id.NONE;
+            if (Enum.IsDefined(typeof(Identifiable.Id), name)) return false;
+            id = InvokeAsStep(() => IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name));
+            if (mod is null) mod = SRMod.GetCurrentMod();
+            IdentifiableRegistry.moddedIdentifiables[id] = mod;
+            return true;
+        }
+
+        public static SlimeDefinition GetSlimeByFullName(string name)
+        {
+            // @MagicGonads
+            SlimeDefinitions defns = GameContext.Instance.SlimeDefinitions;
+            return defns.GetSlimeByIdentifiableId((Identifiable.Id)Enum.Parse(typeof(Identifiable.Id), name));
+        }
+
+        public static bool TryGetSlimeByFullName(string name, out SlimeDefinition slime)
+        {
+            // @MagicGonads
+            SlimeDefinitions defns = GameContext.Instance.SlimeDefinitions;
+            return defns.slimeDefinitionsByIdentifiable.TryGetValue((Identifiable.Id)Enum.Parse(typeof(Identifiable.Id), name), out slime);
+        }
+
+        public static string GetFullName(this SlimeDefinition slime)
+        {
+            // @MagicGonads
+            return slime.IdentifiableId.ToString();
+        }
+
+        public static void SetDisplayName(this SlimeDefinition slime, string name)
+        {
+            // @MagicGonads @Lionmeow
+            var entry = "l." + slime.GetFullName().ToLower();
+            var hasDone = TranslationPatcher.doneDictionaries.ContainsKey("actor");
+            if (hasDone && TranslationPatcher.doneDictionaries["actor"].ContainsKey(entry))
+                TranslationPatcher.doneDictionaries["actor"].Remove(entry);
+            InvokeAsStep(() => TranslationPatcher.AddActorTranslation(entry, name));
+            if (hasDone) TranslationPatcher.doneDictionaries["actor"][entry] = name;
+            if (TranslationPatcher.patches.ContainsKey("actor"))
+                TranslationPatcher.patches["actor"][entry] = name;
+        }
+
+        public static string GetDisplayName(this SlimeDefinition slime, out Dictionary<string, string> dict)
+        {
+            // @MagicGonads @Lionmeow
+            var entry = "l." + slime.GetFullName().ToLower();
+            dict = null;
+            if (TranslationPatcher.doneDictionaries.ContainsKey("actor") && (dict = TranslationPatcher.doneDictionaries["actor"]).ContainsKey(entry))
+            {
+                return TranslationPatcher.doneDictionaries["actor"][entry];
+            }
+            if (TranslationPatcher.patches.ContainsKey("actor") && (dict = TranslationPatcher.patches["actor"]).ContainsKey(entry))
+                return TranslationPatcher.patches["actor"][entry];
+            return TitleCase(slime.GetFullName().Replace("_", " "));
+        }
+
+        public static string GetDisplayName(this SlimeDefinition slime)
+        {
+            // @MagicGonads @Lionmeow
+            return GetDisplayName(slime, out _);
         }
 
         public static string EncodeHash(int value)
@@ -327,7 +359,7 @@ namespace FusionCore
             if (blames.HasPiece(id))
             {
                 var data = blames.GetCompoundPiece(id);
-                return fusionModes[data.GetValue<string>("mode")].ParseParameters(data.GetValue<string>("parameters").Split('\t'));
+                return fusionModes[data.GetValue<string>("mode")].ParseParameters(data.GetValue<string[]>("parameters"));
             }
             return null;
         }
@@ -345,11 +377,13 @@ namespace FusionCore
 
         public static List<SlimeDefinition> FlattenComponents(IEnumerable<SlimeDefinition> components)
         {
+            // @MagicGonads
             return components.SelectMany(c => PureSlimeFullNames(c.GetFullName()).Select(GetSlimeByFullName)).ToList();
         }
 
         public static List<SlimeDefinition> FlattenComponents(params SlimeDefinition[] components)
         {
+            // @MagicGonads
             return FlattenComponents(components);
         }
     }
