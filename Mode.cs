@@ -17,7 +17,7 @@ namespace FusionCore
         public static IEnumerable<(Parameter.Form form, string label)> RepeatVariadic(Parameter.Form form, string label)
             { while (true) yield return (form, label); }
 
-        protected abstract SlimeDefinition Produce(ref List<SlimeDefinition> components, ref List<Parameter> parameters);
+        public abstract SlimeDefinition ProduceRaw(ref List<SlimeDefinition> components, ref List<Parameter> parameters, out bool isNew);
         public virtual bool FixAppearance(SlimeDefinition slime, ref SlimeAppearance appearance) => false;
 
         public override int GetHashCode() { return Blame.GetHashCode(); }
@@ -32,7 +32,7 @@ namespace FusionCore
 
         public Mode() { }
 
-        public SlimeDefinition Produce(List<SlimeDefinition> components, List<Parameter> parameters = null)
+        public SlimeDefinition Produce(List<SlimeDefinition> components, List<Parameter> parameters, out bool isNew)
         {
             // @MagicGonads
             parameters = parameters ?? new List<Parameter>();
@@ -40,10 +40,18 @@ namespace FusionCore
             var gc = ++globalInvokeCounter; var lc = ++localInvokeCounter;
             Log.Info($"{nameof(FusionCore)}: [#{gc}|#{lc}] Fusing in mode {Blame}..." +
                 $" (on {string.Join(", ", components.Select(Core.GetFullName))}) (with {string.Join(", ", parameters)}...)");
-            var slime = Produce(ref components, ref parameters);
-            RememberID(slime.IdentifiableId, components, parameters);
-            Log.Info($"{nameof(FusionCore)}: [#{gc}|#{lc}] Fusion resulted in {DebugName(slime)}");
+            var hash = UniqueSurnameHash(components, parameters);
+            if (cachedHashes.TryGetValue(hash, out var slime)) isNew = false;
+            else slime = ProduceRaw(ref components, ref parameters, out isNew);
+            if (isNew) RememberID(slime.IdentifiableId, components, parameters);
+            cachedHashes[hash] = slime;
+            Log.Info($"{nameof(FusionCore)}: [#{gc}|#{lc}] Fusion resulted in {(isNew ? "a new " : "an existing ")}{DebugName(slime)}");
             return slime;
+        }
+
+        public SlimeDefinition Produce(List<SlimeDefinition> components, List<Parameter> parameters = null)
+        {
+            return Produce(components, parameters, out _);
         }
 
         public List<SlimeDefinition> ParseComponents(string fusion)

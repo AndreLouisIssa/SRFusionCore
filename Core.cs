@@ -16,6 +16,7 @@ namespace FusionCore
         public static readonly Dictionary<string, Mode> fusionModes = new Dictionary<string, Mode>();
         public static readonly Dictionary<string, SlimeDefinition> pureSlimes = new Dictionary<string, SlimeDefinition>();
         public static readonly List<Identifiable.Id> exemptSlimes = new List<Identifiable.Id>();
+        public static readonly Dictionary<int, SlimeDefinition> cachedHashes = new Dictionary<int, SlimeDefinition>();
 
         public static readonly CompoundDataPiece blames = new CompoundDataPiece("blames");
         public static void OnWorldDataLoad(CompoundDataPiece data)
@@ -97,7 +98,7 @@ namespace FusionCore
             }
             if (TranslationPatcher.patches.ContainsKey("actor") && (dict = TranslationPatcher.patches["actor"]).ContainsKey(entry))
                 return TranslationPatcher.patches["actor"][entry];
-            return null;
+            return TitleCase(slime.GetFullName().Replace("_", " "));
         }
 
         public static string GetDisplayName(this SlimeDefinition slime)
