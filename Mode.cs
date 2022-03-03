@@ -41,14 +41,14 @@ namespace FusionCore
             components = components.ToList();
             parameters = parameters.ToList();
             var gc = ++globalInvokeCounter; var lc = ++localInvokeCounter;
-            Log.Info($"{nameof(FusionCore)}: [#{gc}|#{lc}] Fusing in mode {Blame}..." +
+            if (!Silent) Log.Info($"{nameof(FusionCore)}: [#{gc}|#{lc}] Fusing in mode {Blame}..." +
                 $" (on {string.Join(", ", components.Select(Core.GetFullName))}) (with {string.Join(", ", parameters)}...)");
             var hash = UniqueSurnameHash(components, parameters);
             if (cachedHashes.TryGetValue(hash, out var slime)) isNew = false;
             else slime = ProduceRaw(ref components, ref parameters, out isNew);
             if (isNew) RememberID(slime.IdentifiableId, components, parameters);
             cachedHashes[hash] = slime;
-            Log.Info($"{nameof(FusionCore)}: [#{gc}|#{lc}] Fusion resulted in {(isNew ? "a new " : "an existing ")}{DebugName(slime)}");
+            if (!Silent) Log.Info($"{nameof(FusionCore)}: [#{gc}|#{lc}] Fusion resulted in {(isNew ? "a new " : "an existing ")}{DebugName(slime)}");
             return slime;
         }
 

@@ -72,7 +72,7 @@ namespace FusionCore
             public readonly T value;
 
             public Singleton(string key, T value) : base(
-                key, typeof(object), false, $"'{key}'", s => new List<string>{ key },
+                key, typeof(T), false, $"'{key}'", s => new List<string>{ key },
                 s => value, s => s == key, o => key
             ) { this.key = key; this.value = value; }
 
@@ -110,12 +110,9 @@ namespace FusionCore
             public static Form Double = new Form("Double", typeof(double), false, "double", s => new List<string> { default(double).ToString() }, s => double.Parse(s), s => double.TryParse(s, out _));
             public static Form String = new Form("String", typeof(string), false, "string", s => new List<string> { }, s => s);
 
-            public static Form Form = new Form("Form", typeof(Form), false, "'Int' etc.",
-                s => instances.Keys.ToList(),
-                s => instances[s], s => instances.ContainsKey(s), o => ((Form)o).name);
             public static Form Mode = new Form("Mode", typeof(Mode), false, "mode",
-                s => instances.Keys.ToList(),
-                s => instances[s], s => instances.ContainsKey(s), o => ((Form)o).name);
+                s => Core.fusionModes.Keys.ToList(),
+                s => Core.fusionModes[s], s => Core.fusionModes.ContainsKey(s), o => ((Mode)o).Blame);
 
             public static Form Slime = new Form("Slime", typeof(SlimeDefinition), true, "'PINK_SLIME' etc.",
                 s => GameContext.Instance.SlimeDefinitions.Slimes.Select(Core.GetFullName).ToList(),
