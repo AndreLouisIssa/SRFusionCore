@@ -95,8 +95,13 @@ namespace FusionCore
             {
                 var type = forms.First();
                 foreach (var t in forms.Skip(1))
-                    { type = new Join(type, t); }
+                { type = new Join(type, t); }
                 return type;
+            }
+
+            public static Form Singleton<T>(string name, T value)
+            {
+                return new Singleton<T>(name, value);
             }
 
             public static Form Null = new Singleton<object>("null", null);

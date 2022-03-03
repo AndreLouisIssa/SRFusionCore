@@ -10,6 +10,9 @@ namespace FusionCore
     {
         // @MagicGonads @Aidanamite
         public static readonly Fuse instance = new Fuse();
+        public static readonly Form modeForm = Form.Forms.Mode;
+        public static readonly Form helpForm = Form.Forms.Singleton("help",0);
+        public static readonly Form helpOrModeForm = Form.Forms.Join(helpForm, modeForm);
 
         public override string Usage => "fuse <mode> <components> <required> <optional> <variadic>";
         public override string ID => "fuse";
@@ -33,23 +36,26 @@ namespace FusionCore
             // @MagicGonads
             if (args == null || args.Length < 1)
                 { Log.Error("you must specify a mode to fuse using"); return false; }
-            var blame = args[0].ToLower();
-            var help = false;
-            if (blame == "help" && args.Length == 2)
-                { help = true; blame = args[1].ToLower(); }
-            if (!fusionModes.TryGetValue(blame, out var strat))
-                { Log.Error($"the mode \"{blame}\" was not found"); return false; }
-            if (help)
-                { Help(strat, null, (s) => Log.Info(s)); return true; }
+            if (!Parameter.TryParse(helpOrModeForm, args[0].ToLower(), out var blame))
+                { Log.Error($"the mode \"{args[0].ToLower()}\" was not found"); return false; }
+            if (blame.GetForm() == helpForm)
+            {
+                if (args.Length < 2)
+                    { Log.Error("you must specify a mode to fuse using"); return false; }
+                if (!Parameter.TryParse(modeForm, args[1].ToLower(), out blame))
+                    { Log.Error($"the mode \"{args[1].ToLower()}\" was not found"); return false; }
+                Help(blame.GetValue<Mode>(), null, (s) => Log.Info(s)); return true;
+            }
+            var mode = blame.GetValue<Mode>();
             if (args.Length < 2)
-                { Help(strat, "too few arguments given"); return false; }
-            List<SlimeDefinition> components = strat.ParseComponents(args[1]);
-            if (args.Length < 2 + strat.Required.Count)
-                { Help(strat, "too many arguments given"); return false; }
-            if (!strat.Variadic.Any() && args.Length > 2 + strat.Required.Count + strat.Optional.Count)
-                { Help(strat, "too many arguments given"); return false; }
-            var parameters = strat.ParseParameters(args.Skip(2));
-            strat.Produce(components, parameters);
+                { Help(mode, "too few arguments given"); return false; }
+            List<SlimeDefinition> components = mode.ParseComponents(args[1]);
+            if (args.Length < 2 + mode.Required.Count)
+                { Help(mode, "too many arguments given"); return false; }
+            if (!mode.Variadic.Any() && args.Length > 2 + mode.Required.Count + mode.Optional.Count)
+                { Help(mode, "too many arguments given"); return false; }
+            var parameters = mode.ParseParameters(args.Skip(2));
+            mode.Produce(components, parameters);
             return true;
         }
 
@@ -57,16 +63,17 @@ namespace FusionCore
         {
             // @MagicGonads
             var args = ConsoleWindow.cmdText.Split(' ').Skip(1).ToList();
-            if (argIndex == 0) return fusionModes.Keys.Select(s => TitleCase(s)).Append("help").ToList();
-            var blame = args[0].ToLower();
-            if (blame == "help" && argIndex == 1) return fusionModes.Keys.Select(s => TitleCase(s)).ToList();
-            if (!fusionModes.TryGetValue(blame, out var strat)) return base.GetAutoComplete(argIndex, argText);
-            if (argIndex == 1) return strat.Fusion.auto(argText);
+            if (argIndex == 0) return helpOrModeForm.auto(argText);
+            if (!Parameter.TryParse(helpOrModeForm, args[0].ToLower(), out var blame))
+                return base.GetAutoComplete(argIndex, argText);
+            if (blame.GetForm() == helpForm && argIndex == 1) return modeForm.auto(argText);
+            var mode = blame.GetValue<Mode>();
+            if (argIndex == 1) return mode.Fusion.auto(argText);
             if (args.Skip(2).Any(s => s.Contains("\""))) return base.GetAutoComplete(argIndex, argText);
-            int i = 1 + strat.Required.Count; int j = i + strat.Optional.Count;
-            if (argIndex <= i) return strat.Required[argIndex - 1].form.auto(argText);
-            if (strat.Variadic.Any() || argIndex <= j) return strat.Optional[argIndex - i - 1].form.auto(argText);
-            if (strat.Variadic.Any()) return strat.Variadic.SkipWhile((t, k) => k < argIndex - j)
+            int i = 1 + mode.Required.Count; int j = i + mode.Optional.Count;
+            if (argIndex <= i) return mode.Required[argIndex - 1].form.auto(argText);
+            if (mode.Variadic.Any() || argIndex <= j) return mode.Optional[argIndex - i - 1].form.auto(argText);
+            if (mode.Variadic.Any()) return mode.Variadic.SkipWhile((t, k) => k < argIndex - j)
                     .TakeWhile((t, k) => k == 0).SelectMany(t => t.form.auto(argText)).ToList();
             return base.GetAutoComplete(argIndex, argText);
         }
