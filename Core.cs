@@ -47,6 +47,7 @@ namespace FusionCore
         public static bool ResolveMissingID(ref string value)
         {
             // @MagicGonads
+            if (!blames.HasPiece(value)) return false;
             var data = blames.GetCompoundPiece(value);
             var blame = data.GetValue<string>("mode");
             if (!fusionModes.TryGetValue(blame, out var mode))
@@ -78,7 +79,7 @@ namespace FusionCore
             // @MagicGonads
             var s = new List<string>();
 
-            foreach (var data in blames.DataList.Select(e => (CompoundDataPiece)e))
+            foreach (var data in blames.DataList.Where(e => e.data != null).Select(e => (CompoundDataPiece)e))
             {
                 s.Add(data.key);
                 s.Add($"{data.GetValue("mode")}");
