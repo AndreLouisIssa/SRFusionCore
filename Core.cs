@@ -15,7 +15,7 @@ namespace FusionCore
         // @MagicGonads
         public static readonly Dictionary<string, Mode> fusionModes = new Dictionary<string, Mode>();
         public static readonly Dictionary<string, SlimeDefinition> pureSlimes = new Dictionary<string, SlimeDefinition>();
-        public static readonly List<Identifiable.Id> exemptSlimes = new List<Identifiable.Id>();
+        public static readonly List<Identifiable.Id> excludedSlimes = new List<Identifiable.Id>();
         public static readonly Dictionary<int, SlimeDefinition> cachedHashes = new Dictionary<int, SlimeDefinition>();
 
         public static readonly CompoundDataPiece blames = new CompoundDataPiece("blames");
@@ -217,6 +217,9 @@ namespace FusionCore
         public static void Setup()
         {
             // @MagicGonads
+            if (Config.exclude != "")
+                foreach (var id in Config.exclude.Split(' ').Select(s => GetSlimeByFullName(s).IdentifiableId))
+                    excludedSlimes.Add(id);
             foreach (var pure in AllSlimes().Where(slime => !slime.IsLargo))
             {
                 pureSlimes.Add(PureName(pure.GetFullName()), pure);
@@ -227,8 +230,7 @@ namespace FusionCore
         {
             // @MagicGonads
             SlimeDefinitions defns = GameContext.Instance.SlimeDefinitions;
-            return defns.Slimes.Where(slime => !exemptSlimes.Contains(slime.IdentifiableId) &&
-                (Config.exclude == "" || !Config.exclude.Split(' ').Contains(slime.GetFullName()))).ToList();
+            return defns.Slimes.Where(slime => !excludedSlimes.Contains(slime.IdentifiableId)).ToList();
         }
 
         public static string PureName(string name)
@@ -321,7 +323,8 @@ namespace FusionCore
         {
             // @MagicGonads
             return string.Join(" ", PureSlimeFullNames(components.Select(GetFullName))
-                .Select(GetSlimeByFullName).Select(s => GetDisplayName(s) ?? TitleCase(s.GetFullName().Replace("_", " "))).Select(s => s.Contains(' ') ? s.Substring(0, s.LastIndexOf(' ')) : s).Append(TitleCase(suffix)));
+                .Select(GetSlimeByFullName).Select(s => GetDisplayName(s) ?? TitleCase(s.GetFullName().Replace("_", " ")))
+                .Select(s => s.Contains(' ') ? s.Substring(0, s.LastIndexOf(' ')) : s).Append(TitleCase(suffix)));
         }
 
         public static void InvokeAsStep(Action run, SRModLoader.LoadingStep step = SRModLoader.LoadingStep.PRELOAD)
@@ -376,16 +379,12 @@ namespace FusionCore
             return null;
         }
 
+        public static List<SlimeDefinition> FlattenComponents(params SlimeDefinition[] components) { return FlattenComponents(components.AsEnumerable()); }
         public static List<SlimeDefinition> FlattenComponents(IEnumerable<SlimeDefinition> components)
         {
             // @MagicGonads
             return components.SelectMany(c => PureSlimeFullNames(c.GetFullName()).Select(GetSlimeByFullName)).ToList();
         }
-
-        public static List<SlimeDefinition> FlattenComponents(params SlimeDefinition[] components)
-        {
-            // @MagicGonads
-            return FlattenComponents(components);
-        }
+        
     }
 }

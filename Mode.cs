@@ -62,6 +62,18 @@ namespace FusionCore
             return Produce(components, new List<Parameter>());
         }
 
+        public bool TryProduce(List<SlimeDefinition> components, List<Parameter> parameters, out SlimeDefinition fusion)
+        {
+            fusion = Produce(components, parameters, out var isNew);
+            return isNew;
+        }
+
+        public bool TryProduce(List<SlimeDefinition> components, out SlimeDefinition fusion)
+        {
+            fusion = Produce(components, new List<Parameter>(), out var isNew);
+            return isNew;
+        }
+
         public Form GetArgumentForm(int i)
         {
             if (i < Required.Count) return Required[i].form;

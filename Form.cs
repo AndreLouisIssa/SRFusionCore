@@ -91,7 +91,8 @@ namespace FusionCore
 
         public static class Forms
         {
-            public static Form Join(params Form[] forms)
+            public static Form Join(params Form[] forms) { return Join(forms.AsEnumerable()); }
+            public static Form Join(IEnumerable<Form> forms)
             {
                 var type = forms.First();
                 foreach (var t in forms.Skip(1))
