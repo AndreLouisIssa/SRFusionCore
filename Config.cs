@@ -6,6 +6,6 @@ namespace FusionCore
     public static class Config
     {
         // @MagicGonads
-        public static string exclude = "GLITCH_SLIME; TARR_SLIME; GLITCH_TARR_SLIME";
+        public static string exclude = "";
     }
 }
