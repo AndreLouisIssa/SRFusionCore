@@ -167,7 +167,7 @@ namespace FusionCore
                     return Core.pureSlimes.Keys.Select(k => chosen + k).ToList();
                 }, s =>
                 {
-                    return Core.PureSlimeFullNames(s).Select(Core.GetSlimeByFullName).ToList();
+                    return Core.PureSlimeFullNames(s.ToUpper()).Select(Core.GetSlimeByFullName).ToList();
                 }, s => true, l =>
                 {
                     return string.Join("-", ((List<SlimeDefinition>)l).Select(Core.GetFullName).Select(Core.PureName));
