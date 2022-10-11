@@ -36,21 +36,6 @@ namespace FusionCore
             public static void Postfix() { Setup(); }
         }
 
-        [HarmonyPatch(typeof(IdentifiableRegistry), nameof(IdentifiableRegistry.CategorizeId))]
-        public class SR_IdentifiableRegistry_CategorizeId
-        {
-            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-            {
-                // @MagicGonads @Aidanamite
-                // trick SR into thinking our fusion IDs belong to whichever category the mode says it should be
-                // so it doesn't matter what we name the ID, allowing for different suffixes such as an added hash
-                var code = instructions.ToList();
-                var ind = code.FindIndex((x) => x.opcode == OpCodes.Stloc_0);
-                code.Insert(ind++, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Core), nameof(AdjustCategoryName))));
-                return code;
-            }
-        }
-
         [HarmonyPatch(typeof(SaveHandler), nameof(SaveHandler.LoadModdedSave))]
         public class SR_SaveHandler_LoadModdedSave
         {

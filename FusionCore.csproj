@@ -35,10 +35,11 @@
     <Reference Include="0Harmony">
       <HintPath>G:\SteamLibrary\steamapps\common\Slime Rancher\SRML\Libs\0Harmony.dll</HintPath>
     </Reference>
-    <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>G:\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+    <Reference Include="Assembly-CSharp-firstpass_publicized">
+      <HintPath>..\..\..\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\publicized_assemblies\Assembly-CSharp-firstpass_publicized.dll</HintPath>
     </Reference>
-    <Reference Include="Assembly-CSharp_publicized">
+    <Reference Include="Assembly-CSharp_publicized, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\publicized_assemblies\Assembly-CSharp_publicized.dll</HintPath>
     </Reference>
     <Reference Include="DOTween">
@@ -65,10 +66,6 @@
     <Reference Include="Mono.Security">
       <HintPath>G:\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\Mono.Security.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>G:\SteamLibrary\steamapps\common\Slime Rancher\SRML\Libs\Newtonsoft.Json.dll</HintPath>
-    </Reference>
     <Reference Include="SRML.Editor">
       <HintPath>G:\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\SRML.Editor.dll</HintPath>
     </Reference>
@@ -83,7 +80,6 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.EnterpriseServices" />
     <Reference Include="System.Numerics" />
-    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Runtime.Serialization.Formatters.Soap" />
     <Reference Include="System.Security" />
     <Reference Include="System.Transactions" />

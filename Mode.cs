@@ -1,4 +1,5 @@
-﻿using SRML.SR.SaveSystem.Data;
+﻿using SRML;
+using SRML.SR.SaveSystem.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,7 +24,6 @@ namespace FusionCore
 
         public override int GetHashCode() { return Blame.GetHashCode(); }
         public abstract string Blame { get; }
-        public abstract string Category { get; }
         public virtual Form Fusion => Form.Forms.PureSlimes;
         public virtual List<(Form form, string label)> Required => new List<(Form, string)>();
         public virtual List<(Form form, string label, object init)> Optional => new List<(Form, string, object)>();
@@ -115,7 +115,6 @@ namespace FusionCore
             // @MagicGonads @Aidanamite
             var data = new CompoundDataPiece(id.ToString());
             data.SetValue("mode", Blame);
-            data.SetValue("category", Category);
             data.SetValue("components", components.Select(Core.GetFullName).ToArray());
             data.SetValue("parameters", parameters.Select(p => p.ToString()).ToArray());
             blames.AddPiece(data);
@@ -146,7 +145,7 @@ namespace FusionCore
             var display = slime.GetDisplayName();
             if (display != null) display = "\"" + display + "\"";
             else display = "<MISSING DISPLAY NAME>";
-            return $"{TitleCase(Category)}: {display} ({slime.IdentifiableId})";
+            return $"{TitleCase(Identifiable.LARGO_CLASS.Contains(slime.IdentifiableId) ? "LARGO" : "SLIME")}: {display} ({slime.IdentifiableId})";
         }
     }
 }

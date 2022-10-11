@@ -77,13 +77,13 @@ namespace FusionCore
         public static string EncodeBlames(CompoundDataPiece blames)
         {
             // @MagicGonads
+
             var s = new List<string>();
 
             foreach (var data in blames.DataList.Where(e => e.data != null).Select(e => (CompoundDataPiece)e))
             {
                 s.Add(data.key);
                 s.Add($"{data.GetValue("mode")}");
-                s.Add($"{data.GetValue("category")}");
                 s.Add($"{string.Join("\t", data.GetValue<string[]>("components"))}");
                 s.Add($"{string.Join("\t", data.GetValue<string[]>("parameters"))}");
             }
@@ -93,6 +93,7 @@ namespace FusionCore
         public static CompoundDataPiece DecodeBlames(string blamestring)
         {
             // @MagicGonads
+
             var blames = new CompoundDataPiece("blames");
             CompoundDataPiece data = null;
             int i = 0;
@@ -106,33 +107,53 @@ namespace FusionCore
                     case 1:
                         data.SetValue("mode", line); break;
                     case 2:
-                        data.SetValue("category", line); break;
-                    case 3:
                         data.SetValue("components", split); break;
-                    case 4:
+                    case 3:
                         data.SetValue("parameters", split); break;
                 }
-                i %= 5;
+                i %= 4;
             }
             return blames;
         }
 
-        public static string AdjustCategoryName(string original)
+        private static Identifiable.Id internalNewIdentifiableId(string name, SRMod mod)
+        {
+            var id = InvokeAsStep(() => IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name, false));
+            if (mod is null) mod = SRMod.GetCurrentMod();
+            IdentifiableRegistry.moddedIdentifiables[id] = mod;
+            return id;
+            
+        }
+
+        private static Identifiable.Id internalNewIdentifiableId(string name, SRMod mod, IdentifiableCategorization.Rule category)
+        {
+            var id = internalNewIdentifiableId(name, mod);
+            IdentifiableRegistry.Categorize(id, category);
+            return id;
+
+        }
+
+        public static Identifiable.Id NewIdentifiableID(string name, IdentifiableCategorization.Rule category, SRMod mod = null)
         {
             // @MagicGonads @Aidanamite
-            if (blames.HasPiece(original))
-                return "_" + blames.GetCompoundPiece(original).GetValue<string>("category");
-            return original;
+            if (Enum.IsDefined(typeof(Identifiable.Id), name)) throw new Exception($"{nameof(FusionCore)}: ID already exists: {name}");
+            return internalNewIdentifiableId(name, mod, category);
         }
 
         public static Identifiable.Id NewIdentifiableID(string name, SRMod mod = null)
         {
             // @MagicGonads @Aidanamite
             if (Enum.IsDefined(typeof(Identifiable.Id), name)) throw new Exception($"{nameof(FusionCore)}: ID already exists: {name}");
-            var id = InvokeAsStep(() => IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name));
-            if (mod is null) mod = SRMod.GetCurrentMod();
-            IdentifiableRegistry.moddedIdentifiables[id] = mod;
-            return id;
+            return internalNewIdentifiableId(name, mod);
+        }
+
+        public static bool TryNewIdentifiableID(string name, out Identifiable.Id id, IdentifiableCategorization.Rule category, SRMod mod = null)
+        {
+            // @MagicGonads @Aidanamite
+            id = Identifiable.Id.NONE;
+            if (Enum.IsDefined(typeof(Identifiable.Id), name)) return false;
+            id = internalNewIdentifiableId(name, mod, category);
+            return true;
         }
 
         public static bool TryNewIdentifiableID(string name, out Identifiable.Id id, SRMod mod = null)
@@ -140,9 +161,7 @@ namespace FusionCore
             // @MagicGonads @Aidanamite
             id = Identifiable.Id.NONE;
             if (Enum.IsDefined(typeof(Identifiable.Id), name)) return false;
-            id = InvokeAsStep(() => IdentifiableRegistry.CreateIdentifiableId(EnumPatcher.GetFirstFreeValue(typeof(Identifiable.Id)), name));
-            if (mod is null) mod = SRMod.GetCurrentMod();
-            IdentifiableRegistry.moddedIdentifiables[id] = mod;
+            id = internalNewIdentifiableId(name, mod);
             return true;
         }
 
